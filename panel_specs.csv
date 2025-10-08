@@ -1,0 +1,3 @@
+manufacturer,model number,voc (V),isc (A),vmp (V),imp (A),temp_coeff_voc (%/°C),temp_coeff_vmpp (%/°C),temp_coeff_isc (%/°C)
+Jinko Solar,JKM595N-72HL4-V,52.79,14.19,43.88,13.56,-0.27,-0.35,0.05
+Jinko Solar,JKM440N-54HL4R-B,39.57,13.8,32.99,13.34,-0.27,-0.35,0.05
