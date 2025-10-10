@@ -1,0 +1,1317 @@
+{
+  "success": true,
+  "data": {
+    "strings": {
+      "s1": {
+        "panel_ids": [
+          "f25058db5a8942f8",
+          "fe5e34ef43e546cc",
+          "cbd25c89b91f488e",
+          "759e5edc0d9f4fa4"
+        ],
+        "inverter": "Inverter_1",
+        "mppt": "MPPT_1",
+        "roof_section": "3",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s2": {
+        "panel_ids": [
+          "ffb38f964a5643c7",
+          "74b2dc3332eb43b6",
+          "72fdc9d7c52d4aab",
+          "a0ce778bcf0147cc"
+        ],
+        "inverter": "Inverter_2",
+        "mppt": "MPPT_2",
+        "roof_section": "3",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s3": {
+        "panel_ids": [
+          "65fcfbf8e9874271",
+          "3aba96303e1d499d",
+          "f6f0c357206a4401",
+          "50e986ca726946ba"
+        ],
+        "inverter": "Inverter_3",
+        "mppt": "MPPT_3",
+        "roof_section": "2",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s4": {
+        "panel_ids": [
+          "efa9ffd3653e43ce",
+          "6ac8dd3151d74969",
+          "853c5ba851654548",
+          "2c3ca0cfc8a14ec3"
+        ],
+        "inverter": "Inverter_4",
+        "mppt": "MPPT_4",
+        "roof_section": "4",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s5": {
+        "panel_ids": [
+          "ee40c16d7b0340de",
+          "694d90721b0342e9",
+          "ec7c7cd935b94be1",
+          "ffe071e1c23b450d"
+        ],
+        "inverter": "Inverter_5",
+        "mppt": "MPPT_5",
+        "roof_section": "4",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s6": {
+        "panel_ids": [
+          "24463e5237384a48",
+          "fb194bca1417406e",
+          "ee35a23af1da4d0c"
+        ],
+        "inverter": "Inverter_6",
+        "mppt": "MPPT_6",
+        "roof_section": "5",
+        "properties": {
+          "voltage_V": 150.25,
+          "current_A": 13.56,
+          "power_W": 2037.41,
+          "max_voltage_V": 110.48
+        }
+      },
+      "s7": {
+        "panel_ids": [
+          "ccb95b61f5c14d05",
+          "a5b075b77e87498c",
+          "d1eb566aa2dc48fb",
+          "a44200c887944c79"
+        ],
+        "inverter": "Inverter_7",
+        "mppt": "MPPT_7",
+        "roof_section": "5",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s8": {
+        "panel_ids": [
+          "6056635e6d7e4d17",
+          "c0ea6586bf6b41b8",
+          "e2f9bac9fe9748f9",
+          "21842a16b2044627"
+        ],
+        "inverter": "Inverter_8",
+        "mppt": "MPPT_8",
+        "roof_section": "5",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s9": {
+        "panel_ids": [
+          "f41e4456b4164d83",
+          "2e8eb547db754ea5",
+          "4445a2f0d58a4175",
+          "152285b7425d48e9"
+        ],
+        "inverter": "Inverter_9",
+        "mppt": "MPPT_9",
+        "roof_section": "1",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s10": {
+        "panel_ids": [
+          "05c4823a7d1d4041",
+          "74721fda59d54410",
+          "045602fcb7a74331",
+          "c2eae1dc73d04466"
+        ],
+        "inverter": "Inverter_10",
+        "mppt": "MPPT_10",
+        "roof_section": "6",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s11": {
+        "panel_ids": [
+          "e716250f87b042c9",
+          "11c086a4babb4340",
+          "35899e91dd7c4348",
+          "bbb3937a78fe4dc0"
+        ],
+        "inverter": "Inverter_11",
+        "mppt": "MPPT_11",
+        "roof_section": "6",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s12": {
+        "panel_ids": [
+          "5d880d12bde44dc1",
+          "9063249a728b45d2",
+          "f5d8c71c53e34ab2",
+          "7552cd2fe3c14fd0"
+        ],
+        "inverter": "Inverter_12",
+        "mppt": "MPPT_12",
+        "roof_section": "6",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s13": {
+        "panel_ids": [
+          "80c3def6eabc4944",
+          "2266bb708a4f44fd",
+          "f6f7ec52d7584d5a",
+          "ad2040791b374c4e"
+        ],
+        "inverter": "Inverter_13",
+        "mppt": "MPPT_13",
+        "roof_section": "6",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s14": {
+        "panel_ids": [
+          "f5af41aa78624f0f",
+          "cc9e4c8263f14573",
+          "8a0c3d90ddca41c5",
+          "483c7bda6a3e48c7"
+        ],
+        "inverter": "Inverter_14",
+        "mppt": "MPPT_14",
+        "roof_section": "6",
+        "properties": {
+          "voltage_V": 200.34,
+          "current_A": 13.56,
+          "power_W": 2716.55,
+          "max_voltage_V": 147.31
+        }
+      },
+      "s15": {
+        "panel_ids": [
+          "0bc85a7895e04f51",
+          "d220793009614b62",
+          "f3bc6b37bb4c43e0"
+        ],
+        "inverter": "Inverter_15",
+        "mppt": "MPPT_15",
+        "roof_section": "6",
+        "properties": {
+          "voltage_V": 150.25,
+          "current_A": 13.56,
+          "power_W": 2037.41,
+          "max_voltage_V": 110.48
+        }
+      }
+    },
+    "inverter_specs": {
+      "Inverter_1": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_1"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_2": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_2"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_3": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_3"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_4": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_4"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_5": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_5"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_6": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_6"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 150.25,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2037.41,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.02,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2037.41
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "OVERSIZED"
+        }
+      },
+      "Inverter_7": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_7"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_8": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_8"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_9": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_9"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_10": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_10"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_11": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_11"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_12": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_12"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_13": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_13"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_14": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_14"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 200.34,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2716.55,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.36,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2716.55
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "ACCEPTABLE"
+        }
+      },
+      "Inverter_15": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_15"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 150.25,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 2037.41,
+          "rated_ac_power_W": 2000,
+          "max_dc_power_limit_W": 3000.0,
+          "dc_ac_ratio": 1.02,
+          "will_clip_power": true,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 2037.41
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "OVERSIZED"
+        }
+      }
+    },
+    "mppt_specs": {
+      "MPPT_1": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_2": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_3": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_4": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_5": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_6": {
+        "num_strings": 1,
+        "total_panels": 3,
+        "voltage": {
+          "operating_voltage_V": 150.25,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2037.41,
+          "calculation": {
+            "panels_per_string": 3,
+            "num_parallel_strings": 1,
+            "total_panels": 3,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 150.25,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_7": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_8": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_9": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_10": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_11": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_12": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_13": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_14": {
+        "num_strings": 1,
+        "total_panels": 4,
+        "voltage": {
+          "operating_voltage_V": 200.34,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2716.55,
+          "calculation": {
+            "panels_per_string": 4,
+            "num_parallel_strings": 1,
+            "total_panels": 4,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 200.34,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      },
+      "MPPT_15": {
+        "num_strings": 1,
+        "total_panels": 3,
+        "voltage": {
+          "operating_voltage_V": 150.25,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 2037.41,
+          "calculation": {
+            "panels_per_string": 3,
+            "num_parallel_strings": 1,
+            "total_panels": 3,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 150.25,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      }
+    },
+    "summary": {
+      "total_panels": 63,
+      "total_panels_stringed": 58,
+      "total_strings": 15,
+      "total_mppts_used": 15,
+      "total_inverters_used": 15,
+      "stringing_efficiency": 92.06,
+      "total_straggler_panels": 5
+    },
+    "straggler_warnings": [
+      {
+        "roof_id": "3",
+        "group_number": 1,
+        "panel_count": 1,
+        "panel_ids": [
+          "68f54860fc3b40f2"
+        ],
+        "estimated_voltage_V": 50.1,
+        "min_required_voltage_V": 100.0,
+        "voltage_deficit_V": 49.9,
+        "reason": "Insufficient panels to meet minimum inverter startup voltage"
+      },
+      {
+        "roof_id": "2",
+        "group_number": 1,
+        "panel_count": 1,
+        "panel_ids": [
+          "9df8a8e3e01644fb"
+        ],
+        "estimated_voltage_V": 50.1,
+        "min_required_voltage_V": 100.0,
+        "voltage_deficit_V": 49.9,
+        "reason": "Insufficient panels to meet minimum inverter startup voltage"
+      },
+      {
+        "roof_id": "4",
+        "group_number": 1,
+        "panel_count": 1,
+        "panel_ids": [
+          "72040a108f90418c"
+        ],
+        "estimated_voltage_V": 50.1,
+        "min_required_voltage_V": 100.0,
+        "voltage_deficit_V": 49.9,
+        "reason": "Insufficient panels to meet minimum inverter startup voltage"
+      },
+      {
+        "roof_id": "5",
+        "group_number": 1,
+        "panel_count": 1,
+        "panel_ids": [
+          "3ac95957fb9b43ad"
+        ],
+        "estimated_voltage_V": 50.1,
+        "min_required_voltage_V": 100.0,
+        "voltage_deficit_V": 49.9,
+        "reason": "Insufficient panels to meet minimum inverter startup voltage"
+      },
+      {
+        "roof_id": "1",
+        "group_number": 1,
+        "panel_count": 1,
+        "panel_ids": [
+          "5eb48dbe765d41ec"
+        ],
+        "estimated_voltage_V": 50.1,
+        "min_required_voltage_V": 100.0,
+        "voltage_deficit_V": 49.9,
+        "reason": "Insufficient panels to meet minimum inverter startup voltage"
+      }
+    ],
+    "preliminary_sizing_check": {
+      "total_panels": 63,
+      "power_per_panel_W": 679.14,
+      "total_system_dc_power_W": 42785.62,
+      "inverter_rated_ac_power_W": 2000,
+      "preliminary_dc_ac_ratio": 21.39,
+      "status": "UNDERSIZED",
+      "recommendation": "Inverter too small. Need ~16 of these or a 35.7kW inverter",
+      "better_inverter_options": []
+    },
+    "suggestions": [
+      "Straggler panels detected (5 panels) and inverter was undersized for ideal string length. Consider using an inverter with higher capacity to accommodate longer strings and reduce stragglers.",
+      "Recommended inverter capacity: ~4kW AC per inverter (to accommodate 9-panel strings at optimal 1.25 DC/AC ratio)."
+    ],
+    "metadata": {
+      "optimization_time_seconds": 0.0424,
+      "state": "California",
+      "validate_power": true,
+      "output_frontend": true,
+      "total_panels": 63,
+      "timestamp": 1760070853.1064184
+    }
+  }
+}

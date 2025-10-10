@@ -1,0 +1,12 @@
+manufacturer,model number,maxDCInputVoltage (V),numberOfMPPTs,startUpVoltage (V),maxDCInputCurrentPerMPPT (A),maxDCInputCurrentPerString (A),mpptOperatingVoltageMinRange (V),mpptOperatingVoltageMaxRange (V),maxShortCircuitCurrentPerMPPT (A),ratedACPower_W
+Huawei,SUN2000-2KTL-L1,600.0,2,100.0,12.5,12.5,90.0,560.0,18.0,2000
+Huawei,SUN2000-8K-LCO,600.0,3,50.0,12.5,12.5,170.0,560.0,18.0,8000
+Ginlong Solis,S6-GR1P3K ,600.0,1,120.0,14.0,14.0,90.0,520.0,22.0,3000
+Ginlong Solis,S6-GR1P3.6K,600.0,1,120.0,14.0,14.0,90.0,520.0,22.0,3600
+Ginlong Solis,S6-GR1P5k,600.0,1,120.0,14.0,14.0,90.0,520.0,22.0,5000
+Ginlong Solis,S6-GR1P6k,600.0,1,100.0,12.5,12.5,90.0,560.0,18.0,6000
+Ginlong Solis,S6-EH1P5K-L-PRO,600.0,1,100.0,12.5,12.5,90.0,560.0,18.0,5000
+Ginlong Solis,S6-EH1P6K-L-PRO,600.0,1,100.0,12.5,12.5,90.0,560.0,18.0,6000
+Ginlong Solis,S6-EH1P8K-L-PRO,600.0,1,100.0,12.5,12.5,90.0,560.0,18.0,8000
+Ingeteam,Ingecon Sun 6TL-M - Square,600.0,1,100.0,12.5,12.5,90.0,560.0,18.0,6000
+Ingeteam,Ingecon Sun 6TL-M - Tower,600.0,1,100.0,12.5,12.5,90.0,560.0,18.0,6000
