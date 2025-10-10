@@ -114,7 +114,7 @@ For each string, MPPT, and inverter, calculate:
 - `is_safe`: Safety current is within inverter's short-circuit limit
 - `status`: OPTIMAL (1.1-1.3), ACCEPTABLE (1.0-1.5), UNDERSIZED (<1.0), OVERSIZED (>1.5)
 
-### 9. Generate Intelligent Suggestions
+### 9. Generate Suggestions
 
 Based on results, provide actionable recommendations:
 
