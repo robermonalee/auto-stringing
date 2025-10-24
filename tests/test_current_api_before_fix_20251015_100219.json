@@ -1,0 +1,131 @@
+{
+  "success": true,
+  "data": {
+    "strings": {
+      "s1": {
+        "panel_ids": [
+          "panel_1",
+          "panel_2",
+          "panel_3",
+          "panel_4",
+          "panel_5",
+          "panel_6",
+          "panel_7",
+          "panel_8",
+          "panel_9"
+        ],
+        "inverter": "Inverter_1",
+        "mppt": "MPPT_1",
+        "roof_section": "",
+        "properties": {
+          "voltage_V": 450.75,
+          "current_A": 13.56,
+          "power_W": 6112.23,
+          "max_voltage_V": 331.44
+        }
+      }
+    },
+    "inverter_specs": {
+      "Inverter_1": {
+        "num_mppts": 1,
+        "mppt_ids": [
+          "MPPT_1"
+        ],
+        "voltage": {
+          "typical_mppt_voltage_V": 450.75,
+          "max_allowed_voltage_V": 600.0
+        },
+        "current": {
+          "per_mppt_limit_A": 12.5,
+          "all_mppts_within_limits": false,
+          "will_clip": true,
+          "is_safe": true
+        },
+        "power": {
+          "total_dc_power_W": 6112.23,
+          "rated_ac_power_W": 8000.0,
+          "max_dc_power_limit_W": 12000.0,
+          "dc_ac_ratio": 0.76,
+          "will_clip_power": false,
+          "within_dc_power_limit": true,
+          "average_power_per_mppt_W": 6112.23
+        },
+        "validation": {
+          "all_mppts_safe": true,
+          "within_power_limits": true,
+          "optimal_dc_ac_ratio": false,
+          "status": "OVERSIZED"
+        }
+      }
+    },
+    "mppt_specs": {
+      "MPPT_1": {
+        "num_strings": 1,
+        "total_panels": 9,
+        "voltage": {
+          "operating_voltage_V": 450.75,
+          "max_allowed_voltage_V": 560.0,
+          "min_required_voltage_V": 90.0,
+          "within_limits": true
+        },
+        "current": {
+          "operating_current_A": 13.56,
+          "max_current_A": 14.19,
+          "isc_with_safety_factor_A": 17.74,
+          "max_usable_current_per_string_A": 12.5,
+          "max_short_circuit_current_per_mppt_A": 18.0,
+          "will_clip": true,
+          "is_safe": true,
+          "within_limits": false
+        },
+        "power": {
+          "total_power_W": 6112.23,
+          "calculation": {
+            "panels_per_string": 9,
+            "num_parallel_strings": 1,
+            "total_panels": 9,
+            "vmpp_per_panel_V": 50.08,
+            "impp_per_panel_A": 13.56,
+            "string_voltage_V": 450.75,
+            "mppt_current_A": 13.56,
+            "formula": "Power = String_Voltage \u00d7 MPPT_Current = (Vmpp \u00d7 panels) \u00d7 (Impp \u00d7 strings)"
+          }
+        }
+      }
+    },
+    "summary": {
+      "total_panels": 9,
+      "total_panels_stringed": 9,
+      "total_strings": 1,
+      "total_mppts_used": 1,
+      "total_inverters_used": 1,
+      "stringing_efficiency": 100.0
+    },
+    "preliminary_sizing_check": {
+      "total_panels": 9,
+      "power_per_panel_W": 679.14,
+      "total_system_dc_power_W": 6112.23,
+      "inverter_rated_ac_power_W": 8000.0,
+      "preliminary_dc_ac_ratio": 0.76,
+      "status": "OVERSIZED",
+      "recommendation": "Inverter may be too large. Consider smaller model for cost efficiency",
+      "better_inverter_options": []
+    },
+    "suggestions": [],
+    "metadata": {
+      "optimization_time_seconds": 0.0349,
+      "state": "California",
+      "validate_power": true,
+      "output_frontend": true,
+      "total_panels": 9,
+      "timestamp": 1760547739.429861
+    }
+  },
+  "_test_metadata": {
+    "test_name": "current_deployment_before_fix",
+    "timestamp": "2025-10-15T10:02:19.453642",
+    "api_url": "https://ywarxlkyexfqbdh5srw6f3vysq0ukojs.lambda-url.us-east-2.on.aws/",
+    "test_description": "Testing CURRENT deployed API to confirm DC power not in summary",
+    "expected_issue": "DC power and DC/AC ratio should NOT be in summary section"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "status_code": 500,
+  "error": "{\"success\": false, \"error\": \"Internal server error\", \"message\": \"'str' object has no attribute 'get'\", \"traceback\": \"Traceback (most recent call last):\\n  File \\\"/var/task/lambda_handler.py\\\", line 85, in lambda_handler\\n    panels = data_parsers.create_panel_specs_objects(auto_design_data, solar_panel_specs)\\n  File \\\"/var/task/data_parsers.py\\\", line 173, in create_panel_specs_objects\\n    pix_coords = panel_data.get('pix_coords', {})\\nAttributeError: 'str' object has no attribute 'get'\\n\"}",
+  "timestamp": "2025-10-15T10:02:03.317055",
+  "test": "current_deployment_before_fix"
+}
