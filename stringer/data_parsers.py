@@ -8,12 +8,13 @@ including auto-design.json, panel_specs.csv, inverter_specs.csv, and temperature
 import json
 import csv
 from typing import List, Dict, Tuple, Any
-from solar_stringing_optimizer import PanelSpecs, InverterSpecs, TemperatureData
+from .specs import PanelSpecs, InverterSpecs, TemperatureData
 
 
 def parse_auto_design_json(file_path: str) -> Dict[str, Any]:
     """
     Parse the auto-design.json file to extract solar panel and roof plane information
+    Handles both standard format (oct9design.json) and legacy format
     
     Args:
         file_path: Path to the auto-design.json file
@@ -24,13 +25,23 @@ def parse_auto_design_json(file_path: str) -> Dict[str, Any]:
     with open(file_path, 'r') as f:
         data = json.load(f)
     
-    # Extract the auto_system_design section
-    auto_design = data.get('auto_system_design', {})
+    # Check if this is the standard oct9design format
+    if 'auto_system_design' in data:
+        # Standard format: auto_system_design -> solar_panels
+        auto_design = data.get('auto_system_design', {})
+    else:
+        # Legacy format: auto_design -> solar_panels
+        auto_design = data.get('auto_design', {})
+    
+    # Use roof_planes if available, otherwise use array_stats (for backwards compatibility with oct9design.json)
+    roof_planes = auto_design.get('roof_planes', {})
+    if not roof_planes and 'array_stats' in auto_design:
+        # If array_stats exists but not roof_planes, use array_stats as roof_planes
+        roof_planes = auto_design.get('array_stats', {})
     
     return {
         'solar_panels': auto_design.get('solar_panels', []),
-        'roof_planes': auto_design.get('roof_planes', {}),
-        'array_stats': auto_design.get('array_stats', {}),
+        'roof_planes': roof_planes,
         'system_production_parameters': auto_design.get('system_production_parameters', {})
     }
 
@@ -91,20 +102,22 @@ def parse_inverter_specs_csv(file_path: str) -> List[Dict[str, Any]]:
                 'max_dc_input_current_per_string': float(row.get('maxDCInputCurrentPerString (A)', 0)),
                 'mppt_operating_voltage_min_range': float(row.get('mpptOperatingVoltageMinRange (V)', 0)),
                 'mppt_operating_voltage_max_range': float(row.get('mpptOperatingVoltageMaxRange (V)', 0)),
-                'max_short_circuit_current_per_mppt': float(row.get('maxShortCircuitCurrentPerMPPT (A)', 0))
+                'max_short_circuit_current_per_mppt': float(row.get('maxShortCircuitCurrentPerMPPT (A)', 0)),
+                'rated_ac_power_w': float(row.get('ratedACPower_W', 0))
             }
             inverters.append(inverter_spec)
     
     return inverters
 
 
-def parse_temperature_data_csv(file_path: str, state_name: str) -> TemperatureData:
+def parse_temperature_data_csv(file_path: str, state_identifier: str) -> TemperatureData:
     """
-    Parse the consolidated temperature data CSV to get temperature data for a specific state
+    Parse the consolidated temperature data CSV to get temperature data for a specific state.
+    Can match state by full name or two-letter abbreviation.
     
     Args:
         file_path: Path to the consolidated_temperature_data.csv file
-        state_name: Name of the state to get temperature data for
+        state_identifier: Name or abbreviation of the state (e.g., "California" or "CA")
         
     Returns:
         TemperatureData object with min and max temperatures
@@ -116,13 +129,15 @@ def parse_temperature_data_csv(file_path: str, state_name: str) -> TemperatureDa
     
     # Find the row for the specified state
     state_row = None
+    identifier_lower = state_identifier.lower()
     for row in rows:
-        if row['State_Name'].lower() == state_name.lower():
+        if (row['State_Name'].lower() == identifier_lower or 
+            row['State_Abbreviation'].lower() == identifier_lower):
             state_row = row
             break
     
     if state_row is None:
-        raise ValueError(f"State '{state_name}' not found in temperature data")
+        raise ValueError(f"State '{state_identifier}' not found in temperature data")
     
     return TemperatureData(
         min_temp_c=float(state_row['Min_Recorded_Temperature_Celsius']),
@@ -133,13 +148,13 @@ def parse_temperature_data_csv(file_path: str, state_name: str) -> TemperatureDa
 
 
 def create_panel_specs_objects(auto_design_data: Dict[str, Any], 
-                              panel_specs_data: List[Dict[str, Any]]) -> List[PanelSpecs]:
+                              panel_specs_data) -> List[PanelSpecs]:
     """
     Create PanelSpecs objects by combining auto-design.json data with panel specifications
     
     Args:
         auto_design_data: Parsed data from auto-design.json
-        panel_specs_data: Parsed data from panel_specs.csv
+        panel_specs_data: Either a List[Dict] from CSV or a single Dict from JSON input
         
     Returns:
         List of PanelSpecs objects
@@ -147,14 +162,19 @@ def create_panel_specs_objects(auto_design_data: Dict[str, Any],
     panels = []
     solar_panels = auto_design_data['solar_panels']
     
-    # For now, assume all panels use the first panel specification
-    # In a real implementation, you'd match panel types based on some identifier
-    representative_spec = panel_specs_data[0] if panel_specs_data else {}
+    # Handle both list (from CSV) and dict (from JSON input package)
+    if isinstance(panel_specs_data, list):
+        # CSV format: list of dicts
+        representative_spec = panel_specs_data[0] if panel_specs_data else {}
+    else:
+        # JSON input format: single dict with specs
+        representative_spec = panel_specs_data
     
     for panel_data in solar_panels:
-        # Extract pixel coordinates (c0 is the center)
+        # Extract pixel coordinates
+        # Support both lowercase 'c0' and uppercase 'C0' formats
         pix_coords = panel_data.get('pix_coords', {})
-        c0 = pix_coords.get('c0', [0, 0])
+        c0 = pix_coords.get('c0') or pix_coords.get('C0', [0, 0])
         center_coords = (float(c0[0]), float(c0[1]))
         
         panel_spec = PanelSpecs(
@@ -171,30 +191,57 @@ def create_panel_specs_objects(auto_design_data: Dict[str, Any],
     return panels
 
 
-def create_inverter_specs_object(inverter_specs_data: List[Dict[str, Any]]) -> InverterSpecs:
+def create_inverter_specs_object(inverter_specs_data) -> InverterSpecs:
     """
     Create InverterSpecs object from parsed inverter data
     
     Args:
-        inverter_specs_data: Parsed data from inverter_specs.csv
+        inverter_specs_data: Either a List[Dict] from CSV or a single Dict from JSON input
         
     Returns:
         InverterSpecs object
     """
-    # For now, use the first inverter specification
-    # In a real implementation, you'd select based on system requirements
-    inverter_data = inverter_specs_data[0] if inverter_specs_data else {}
-    
-    return InverterSpecs(
-        inverter_id=inverter_data.get('model', 'default_inverter'),
-        max_dc_voltage=inverter_data.get('max_dc_input_voltage', 0),
-        mppt_min_voltage=inverter_data.get('mppt_operating_voltage_min_range', 0),
-        mppt_max_voltage=inverter_data.get('mppt_operating_voltage_max_range', 0),
-        max_dc_current_per_mppt=inverter_data.get('max_dc_input_current_per_mppt', 0),
-        max_dc_current_per_string=inverter_data.get('max_dc_input_current_per_string', 0),
-        number_of_mppts=inverter_data.get('number_of_mppts', 0),
-        startup_voltage=inverter_data.get('startup_voltage', 0)
-    )
+    # Handle both list (from CSV) and dict (from JSON input package)
+    if isinstance(inverter_specs_data, list):
+        # CSV format: use first inverter
+        inverter_data = inverter_specs_data[0] if inverter_specs_data else {}
+        # CSV field names (snake_case with underscores)
+        return InverterSpecs(
+            inverter_id=inverter_data.get('model', 'default_inverter'),
+            max_dc_voltage=inverter_data.get('max_dc_input_voltage', 0),
+            mppt_min_voltage=inverter_data.get('mppt_operating_voltage_min_range', 0),
+            mppt_max_voltage=inverter_data.get('mppt_operating_voltage_max_range', 0),
+            max_dc_current_per_mppt=inverter_data.get('max_dc_input_current_per_mppt', 0),
+            max_dc_current_per_string=inverter_data.get('max_dc_input_current_per_string', 0),
+            number_of_mppts=inverter_data.get('number_of_mppts', 0),
+            startup_voltage=inverter_data.get('startup_voltage', 0),
+            max_short_circuit_current_per_mppt=inverter_data.get('max_short_circuit_current_per_mppt', None),
+            rated_ac_power_w=inverter_data.get('rated_ac_power_w', None)
+        )
+    else:
+        # JSON input format: single dict with camelCase field names
+        inverter_data = inverter_specs_data
+        
+        # Validate required field: ratedACPowerW
+        if 'ratedACPowerW' not in inverter_data or inverter_data['ratedACPowerW'] is None:
+            raise ValueError(
+                "Missing required field 'ratedACPowerW' in inverter specifications. "
+                "Please provide the rated AC power in watts (e.g., 'ratedACPowerW': 8000 for an 8kW inverter)."
+            )
+        
+        return InverterSpecs(
+            inverter_id=inverter_data.get('model', 'input_inverter'),
+            max_dc_voltage=float(inverter_data.get('maxDCInputVoltage', 0)),
+            mppt_min_voltage=float(inverter_data.get('mpptOperatingVoltageMinRange', 0)),
+            mppt_max_voltage=float(inverter_data.get('mpptOperatingVoltageMaxRange', 0)),
+            max_dc_current_per_mppt=float(inverter_data.get('maxDCInputCurrentPerMPPT', 0)),
+            max_dc_current_per_string=float(inverter_data.get('maxDCInputCurrentPerString', 0)),
+            number_of_mppts=int(inverter_data.get('numberOfMPPTs', 0)),
+            startup_voltage=float(inverter_data.get('startUpVoltage', 0)),
+            max_short_circuit_current_per_mppt=float(inverter_data.get('maxShortCircuitCurrentPerMPPT')) if 'maxShortCircuitCurrentPerMPPT' in inverter_data else None,
+            rated_ac_power_w=float(inverter_data['ratedACPowerW']),
+            number_of_inverters=int(inverter_data.get('numberOfInverters', 1))  # Default to 1 if not provided
+        )
 
 
 def load_all_data(auto_design_path: str, panel_specs_path: str, 

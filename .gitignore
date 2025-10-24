@@ -1,5 +1,6 @@
 # API Keys and sensitive files
-api_deployment/API_KEYS_AND_URL.txt
+api_deployment/
+v2_api_deployment
 
 # Virtual environment
 venv/
@@ -24,3 +25,12 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Environment files
+.env
+
+# Backups and intermediate files for testing
+backupOct24/
+exampleDesigns/
+output_examples/
+

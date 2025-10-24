@@ -39,11 +39,15 @@ def optimize_stringing():
     
     Request Body:
     {
-        "design": {...},              // Auto-design JSON structure
-        "state": "California",        // State name for temperature data
-        "validate_power": true,       // Optional: enable power validation (default: false)
-        "output_frontend": true       // Optional: frontend format (default: false)
+        "autoDesign": {...},                  // Auto-design JSON structure (or "design")
+        "solarPanelSpecs": {...},             // Optional: panel specs from input (voc, isc, vmp, imp)
+        "inverterSpecs": {...},               // Optional: inverter specs from input
+        "state": "California",                // State name for temperature data
+        "validate_power": true,               // Optional: enable power validation (default: false)
+        "output_frontend": true               // Optional: frontend format (default: false)
     }
+    
+    Note: If solarPanelSpecs/inverterSpecs are not provided, uses default CSV files
     
     Returns:
     {
@@ -67,23 +71,38 @@ def optimize_stringing():
                 "error": "No JSON data provided"
             }), 400
         
-        # Extract parameters
-        design = data.get('design')
+        # Extract parameters - support both 'design' and 'autoDesign' keys
+        design = data.get('design') or data.get('autoDesign')
         state = data.get('state', 'California')
         validate_power = data.get('validate_power', False)
         output_frontend = data.get('output_frontend', False)
         
+        # NEW: Guided PCA parameters
+        use_guided_pca = data.get('use_guided_pca', False)
+        pca_method = data.get('pca_method', 'guided_pca')  # "guided_pca", "forced_axis", or "nearest_neighbor"
+        
+        # Get inverters quantity
+        inverters_quantity = data.get('invertersQuantity')
+
+        # Support solarPanelSpecs and inverterSpecs from input package
+        panel_specs_input = data.get('solarPanelSpecs')
+        inverter_specs_input = data.get('inverterSpecs')
+        
         if not design:
             return jsonify({
                 "success": False,
-                "error": "Missing 'design' field in request"
+                "error": "Missing 'design' or 'autoDesign' field in request"
             }), 400
         
         # Create panel specs from design
-        panels = data_parsers.create_panel_specs_objects(design, PANEL_SPECS_CSV)
+        # Use panel specs from request if provided, otherwise use CSV
+        panel_specs_data = panel_specs_input if panel_specs_input else PANEL_SPECS_CSV
+        panels = data_parsers.create_panel_specs_objects(design, panel_specs_data)
         
         # Create inverter specs
-        inverter = data_parsers.create_inverter_specs_object(INVERTER_SPECS_CSV)
+        # Use inverter specs from request if provided, otherwise use CSV
+        inverter_specs_data = inverter_specs_input if inverter_specs_input else INVERTER_SPECS_CSV
+        inverter = data_parsers.create_inverter_specs_object(inverter_specs_data)
         
         # Parse temperature data for the state
         temp = data_parsers.parse_temperature_data_csv(TEMP_DATA_CSV, state)
@@ -93,8 +112,23 @@ def optimize_stringing():
             panels, 
             inverter, 
             temp,
-            output_frontend=output_frontend
+            output_frontend=output_frontend,
+            use_guided_pca=use_guided_pca,
+            pca_method=pca_method,
+            inverters_quantity=inverters_quantity
         )
+        
+        # NEW: Set auto_design data for Guided PCA
+        if use_guided_pca and design:
+            # Extract auto_system_design if nested
+            if 'auto_system_design' in design:
+                optimizer.auto_design_data = design['auto_system_design']
+            else:
+                optimizer.auto_design_data = design
+            
+            # Extract roof planes
+            if optimizer.auto_design_data and 'roof_planes' in optimizer.auto_design_data:
+                optimizer.roof_planes = optimizer.auto_design_data['roof_planes']
         
         result = optimizer.optimize(validate_power=validate_power)
         
@@ -111,7 +145,9 @@ def optimize_stringing():
                 "inverters_used": output['summary']['total_inverters_used'],
                 "state": state,
                 "validate_power": validate_power,
-                "output_frontend": output_frontend
+                "output_frontend": output_frontend,
+                "use_guided_pca": use_guided_pca,
+                "pca_method": pca_method
             }
         }
         
@@ -121,10 +157,19 @@ def optimize_stringing():
         
         return jsonify(response), 200
         
-    except Exception as e:
+    except ValueError as e:
+        # Validation errors (e.g., missing required fields)
         return jsonify({
             "success": False,
             "error": str(e),
+            "error_type": "ValidationError"
+        }), 400
+    except Exception as e:
+        # Unexpected server errors
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "error_type": "ServerError",
             "traceback": traceback.format_exc()
         }), 500
 

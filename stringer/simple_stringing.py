@@ -12,42 +12,7 @@ Total: ~200 lines of straightforward code
 import math
 from typing import List, Dict, Tuple, Any
 from dataclasses import dataclass
-
-
-@dataclass
-class PanelSpecs:
-    """Panel specifications"""
-    panel_id: str
-    voc_stc: float
-    isc_stc: float
-    vmpp_stc: float
-    impp_stc: float
-    roof_plane_id: str
-    center_coords: Tuple[float, float]
-
-
-@dataclass
-class InverterSpecs:
-    """Inverter specifications"""
-    inverter_id: str
-    max_dc_voltage: float
-    mppt_min_voltage: float
-    mppt_max_voltage: float
-    max_dc_current_per_mppt: float
-    max_dc_current_per_string: float
-    number_of_mppts: int
-    startup_voltage: float
-    max_short_circuit_current_per_mppt: float = None
-    rated_ac_power_w: float = None  # Rated AC output power (extracted from model number)
-
-
-@dataclass
-class TemperatureData:
-    """Temperature data"""
-    min_temp_c: float
-    max_temp_c: float
-    avg_high_temp_c: float
-    avg_low_temp_c: float
+from .specs import PanelSpecs, InverterSpecs, TemperatureData
 
 
 class SimpleStringingOptimizer:
@@ -61,21 +26,33 @@ class SimpleStringingOptimizer:
        - Always connect to closest unconnected panel
        - Create strings of ideal length (6-9 panels)
     3. No zigzag, no complex math, just simple and reliable
+    
+    NEW: Optional Guided PCA sorting for improved stringing paths
     """
     
     def __init__(self, panel_specs: List[PanelSpecs], inverter_specs: InverterSpecs, 
-                 temperature_data: TemperatureData, output_frontend: bool = True):
+                 temperature_data: TemperatureData, output_frontend: bool = True,
+                 use_guided_pca: bool = False, pca_method: str = "guided_pca", inverters_quantity: int = None):
         self.panel_specs = panel_specs
         self.inverter_specs = inverter_specs
         self.temperature_data = temperature_data
         self.output_frontend = output_frontend  # Flag for presentation format
+        self.use_guided_pca = use_guided_pca  # NEW: Enable improved sorting
+        self.pca_method = pca_method  # NEW: "guided_pca", "forced_axis", or "nearest_neighbor"
+        
+        if inverters_quantity is not None:
+            self.inverter_specs.number_of_inverters = inverters_quantity
         
         # Create panel lookup
         self.panel_lookup = {p.panel_id: p for p in panel_specs}
         
+        # Store auto_design data for guided PCA (set later if needed)
+        self.auto_design_data = None
+        self.roof_planes = {}
+        
         # Calculate temperature-adjusted constraints
-        self.temp_coeff_voc = 0.00279  # V/°C per panel
-        self.temp_coeff_vmpp = 0.00446  # V/°C per panel
+        self.temp_coeff_voc = -0.00279  # V/°C per panel (negative for silicon)
+        self.temp_coeff_vmpp = -0.00446  # V/°C per panel (negative for silicon)
         
         # Calculate voltage constraints
         self._calculate_voltage_constraints()
@@ -250,19 +227,19 @@ class SimpleStringingOptimizer:
             "recommendation": recommendation
         }
     
-    def optimize(self, inverter_csv_path: str = None, validate_power: bool = False) -> 'OptimizationResult':
+    def optimize(self, inverter_csv_path: str = None, override_inv_quantity: bool = False) -> 'OptimizationResult':
         """
         Run the simple nearest-neighbor optimization
         
         Args:
             inverter_csv_path: Path to inverter CSV for suggestions
-            validate_power: If True, validates power during stringing and creates
+            override_inv_quantity: If True, validates power during stringing and creates
                           new inverters as needed to maintain optimal DC/AC ratios
         """
         
         # Initialize power validator if requested
-        if validate_power:
-            from validatePower import PowerValidator
+        if override_inv_quantity:
+            from .validatePower import PowerValidator
             self.power_validator = PowerValidator(
                 self.inverter_specs,
                 self.panel_specs[0],
@@ -348,12 +325,26 @@ class SimpleStringingOptimizer:
         print(f"  Created {len(mppts)} MPPTs")
         
         # Step 3: Assign MPPTs to inverters
-        print(f"\nAssigning MPPTs to inverters (max {self.inverter_specs.number_of_mppts} MPPTs per inverter)...")
-        if validate_power:
+        max_inverters = self.inverter_specs.number_of_inverters
+        print(f"\nAssigning MPPTs to inverters...")
+        print(f"  Available inverters: {max_inverters}")
+        print(f"  MPPTs per inverter: {self.inverter_specs.number_of_mppts}")
+        print(f"  Total MPPT capacity: {max_inverters * self.inverter_specs.number_of_mppts}")
+        if override_inv_quantity:
             all_connections = self._assign_mppts_to_inverters_with_power_validation(mppts)
         else:
             all_connections = self._assign_mppts_to_inverters(mppts)
         print(f"  Created {len(all_connections)} inverters")
+        
+        # Track disconnected panels if inverter capacity was reached and power validation is off
+        if not override_inv_quantity:
+            total_mppts_created = len(mppts)
+            total_mppts_assigned = sum(len(inv_mppts) for inv_mppts in all_connections.values())
+            if total_mppts_assigned < total_mppts_created:
+                disconnected_mppts = total_mppts_created - total_mppts_assigned
+                disconnected_panels_count = sum(len(s) for mppt in mppts[total_mppts_assigned:] for s in mppt)
+                print(f"\n⚠️  {disconnected_panels_count} panels disconnected (inverter capacity limit reached)")
+                self._track_disconnected_panels(mppts, total_mppts_assigned)
         
         # Calculate summary (needed for suggestions)
         total_panels = len(self.panel_specs)
@@ -362,7 +353,7 @@ class SimpleStringingOptimizer:
         
         # Track if strings were cropped due to power validation
         strings_cropped_by_power = False
-        if validate_power and self.power_validator:
+        if override_inv_quantity and self.power_validator:
             # Compare actual string lengths to ideal (9 panels normally)
             original_ideal = 9  # Voltage-based ideal before power adjustment
             cropped_count = sum(1 for length in string_lengths if length < original_ideal)
@@ -373,7 +364,7 @@ class SimpleStringingOptimizer:
         has_stragglers = len(self.straggler_warnings) > 0
         total_straggler_count = sum(w['panel_count'] for w in self.straggler_warnings) if has_stragglers else 0
         suggestions = self._generate_suggestions(has_stragglers, total_straggler_count, 
-                                                strings_cropped_by_power, validate_power)
+                                                strings_cropped_by_power, override_inv_quantity)
         
         # Print straggler summary if any
         if self.straggler_warnings:
@@ -453,10 +444,23 @@ class SimpleStringingOptimizer:
         4. WITH POWER VALIDATION: Track inverter power and create new inverter when needed
         5. Repeat until no more valid strings can be made
         6. Handle stragglers: group leftover panels and assign to MPPTs
+        
+        NEW: Optionally use Guided PCA for improved panel ordering
         """
         if not panels:
             return []
         
+        # NEW: Try Guided PCA sorting if enabled
+        if self.use_guided_pca and self.auto_design_data:
+            try:
+                sorted_panel_ids = self._sort_panels_guided_pca(panels, roof_id)
+                if sorted_panel_ids:
+                    # Create strings from sorted order
+                    return self._create_strings_from_sorted_ids(sorted_panel_ids, panels)
+            except Exception as e:
+                print(f"  ⚠️ Guided PCA failed: {e}. Falling back to nearest-neighbor.")
+        
+        # Original nearest-neighbor approach
         # Find starting panel (corner panel = least connected)
         start_panel = self._find_corner_panel(panels)
         
@@ -571,6 +575,78 @@ class SimpleStringingOptimizer:
         x2, y2 = p2.center_coords
         return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     
+    def _sort_panels_guided_pca(self, panels: List[PanelSpecs], roof_id: str) -> List[str]:
+        """
+        Sort panels using Guided PCA method.
+        
+        Returns sorted list of panel IDs or empty list if method fails.
+        """
+        try:
+            from guided_pca_sorting import sort_panels_guided_pca
+        except ImportError:
+            print("  ⚠️ guided_pca_sorting module not available")
+            return []
+        
+        # Get roof azimuth
+        roof_data = self.roof_planes.get(roof_id, {})
+        azimuth = roof_data.get('azimuth', 180.0)  # Default to South if not available
+        
+        # Get panel data from auto_design
+        if not self.auto_design_data or 'solar_panels' not in self.auto_design_data:
+            return []
+        
+        # Filter panels for this roof
+        panel_ids_set = {p.panel_id for p in panels}
+        panels_data = [
+            p for p in self.auto_design_data['solar_panels']
+            if p.get('panel_id') in panel_ids_set
+        ]
+        
+        if not panels_data:
+            return []
+        
+        # Call the guided PCA sorter
+        sorted_ids = sort_panels_guided_pca(
+            panels_data,
+            azimuth,
+            method=self.pca_method,
+            verbose=True
+        )
+        
+        return sorted_ids
+    
+    def _create_strings_from_sorted_ids(
+        self,
+        sorted_panel_ids: List[str],
+        panels: List[PanelSpecs]
+    ) -> List[List[str]]:
+        """
+        Create strings from pre-sorted panel IDs.
+        
+        Simply chunks the sorted list into strings of ideal length.
+        """
+        strings = []
+        current_string = []
+        
+        for panel_id in sorted_panel_ids:
+            current_string.append(panel_id)
+            
+            # Check if string is at ideal length
+            if len(current_string) >= self.ideal_panels_per_string:
+                strings.append(current_string)
+                current_string = []
+        
+        # Handle remaining panels
+        if current_string:
+            # If remaining panels meet minimum requirement, add as string
+            if len(current_string) >= self.min_panels_per_string:
+                strings.append(current_string)
+            else:
+                # Too few - these become stragglers
+                pass
+        
+        return strings
+    
     def _report_stragglers(self, all_panels: List[PanelSpecs], 
                           straggler_ids: set, roof_id: str):
         """
@@ -646,6 +722,42 @@ class SimpleStringingOptimizer:
             self.straggler_warnings.append(warning)
         
         print(f"  ╚════════════════════════════════════════════════════════════════\n")
+    
+    def _track_disconnected_panels(self, all_mppts: List[List[List[str]]], mppts_assigned_count: int):
+        """
+        Track panels that were disconnected due to inverter capacity limits.
+        
+        Args:
+            all_mppts: All MPPTs created during stringing
+            mppts_assigned_count: Number of MPPTs that were assigned to inverters
+        """
+        if not hasattr(self, 'disconnected_warnings'):
+            self.disconnected_warnings = []
+        
+        # Get unassigned MPPTs
+        unassigned_mppts = all_mppts[mppts_assigned_count:]
+        
+        for mppt_idx, mppt_strings in enumerate(unassigned_mppts, start=mppts_assigned_count + 1):
+            for string in mppt_strings:
+                panel_count = len(string)
+                
+                # Calculate voltage and power for this string
+                panel = self.panel_lookup[string[0]] if string and string[0] in self.panel_lookup else None
+                if panel:
+                    temp_diff_hot = self.temperature_data.max_temp_c - 25.0
+                    vmpp_hot = panel.vmpp_stc * (1 + self.temp_coeff_vmpp * temp_diff_hot)
+                    string_voltage = vmpp_hot * panel_count
+                    string_power = string_voltage * panel.impp_stc
+                    
+                    warning = {
+                        "mppt_id": f"MPPT_{mppt_idx}",
+                        "panel_count": panel_count,
+                        "panel_ids": string,
+                        "estimated_voltage_V": round(string_voltage, 1),
+                        "estimated_power_W": round(string_power, 1),
+                        "reason": "Inverter capacity limit reached - no available MPPT slots"
+                    }
+                    self.disconnected_warnings.append(warning)
     
     def _group_stragglers_by_proximity(self, stragglers: List[PanelSpecs]) -> List[List[PanelSpecs]]:
         """
@@ -808,21 +920,42 @@ class SimpleStringingOptimizer:
     
     def _assign_mppts_to_inverters(self, mppts: List[List[List[str]]]) -> Dict[str, Dict[str, List[List[str]]]]:
         """
-        Assign MPPTs to inverters based on inverter MPPT capacity.
+        Assign MPPTs to inverters based on inverter MPPT capacity and available inverter count.
         
         Args:
             mppts: List of MPPTs (each MPPT contains parallel strings)
             
         Returns:
             Dict mapping inverter IDs to their MPPTs
+            
+        Note:
+            If validate_power is False (default), this will respect the number_of_inverters limit.
+            MPPTs that exceed available inverter capacity will not be assigned.
         """
         inverters = {}
         mppts_per_inverter = self.inverter_specs.number_of_mppts
+        max_inverters = self.inverter_specs.number_of_inverters if not self.power_validator else float('inf')
         
         inverter_counter = 1
         mppt_global_counter = 1
+        mppts_assigned = 0
+        
+        # Calculate total MPPT capacity available
+        total_mppt_capacity = max_inverters * mppts_per_inverter if max_inverters != float('inf') else float('inf')
         
         for i in range(0, len(mppts), mppts_per_inverter):
+            # Check if we've reached the inverter limit
+            if inverter_counter > max_inverters:
+                # Log unassigned MPPTs
+                unassigned_count = len(mppts) - mppts_assigned
+                if unassigned_count > 0:
+                    print(f"\n⚠️  WARNING: {unassigned_count} MPPTs could not be assigned (inverter limit reached)")
+                    print(f"   Available inverters: {max_inverters}")
+                    print(f"   MPPTs per inverter: {mppts_per_inverter}")
+                    print(f"   Total MPPT capacity: {total_mppt_capacity}")
+                    print(f"   MPPTs needed: {len(mppts)}")
+                break
+            
             inverter_id = f"Inverter_{inverter_counter}"
             inverter_mppts = mppts[i:i + mppts_per_inverter]
             inverters[inverter_id] = {}
@@ -831,6 +964,7 @@ class SimpleStringingOptimizer:
                 mppt_id = f"MPPT_{mppt_global_counter}"
                 inverters[inverter_id][mppt_id] = mppt
                 mppt_global_counter += 1
+                mppts_assigned += 1
             
             inverter_counter += 1
         
@@ -868,24 +1002,13 @@ class SimpleStringingOptimizer:
             
             mppt_id = f"MPPT_{mppt_global_counter}"
             
-            if validation["valid"]:
+            if validation["valid"] and len(current_inverter_mppts) < self.inverter_specs.number_of_mppts:
                 # Add MPPT to current inverter
                 current_inverter_mppts[mppt_id] = mppt_strings
                 current_inverter_power += mppt_power
                 mppt_global_counter += 1
-                
-                # Check if we've reached MPPT limit for this inverter
-                if len(current_inverter_mppts) >= self.inverter_specs.number_of_mppts:
-                    # Save current inverter and start new one
-                    inverters[current_inverter_id] = current_inverter_mppts
-                    self.inverter_power_tracking[current_inverter_id] = current_inverter_power
-                    
-                    inverter_counter += 1
-                    current_inverter_id = f"Inverter_{inverter_counter}"
-                    current_inverter_mppts = {}
-                    current_inverter_power = 0.0
             else:
-                # MPPT would exceed power limit
+                # MPPT would exceed power limit or MPPT limit
                 # Save current inverter and start new one with this MPPT
                 if current_inverter_mppts:  # Only save if not empty
                     inverters[current_inverter_id] = current_inverter_mppts
@@ -1018,6 +1141,13 @@ class SimpleStringingOptimizer:
                 w["panel_count"] for w in self.straggler_warnings
             )
         
+        # Add disconnected panel warnings if present
+        if hasattr(self, 'disconnected_warnings') and self.disconnected_warnings:
+            result["disconnected_warnings"] = self.disconnected_warnings
+            result["summary"]["total_disconnected_panels"] = sum(
+                w["panel_count"] for w in self.disconnected_warnings
+            )
+        
         return result
     
     def _transform_to_frontend_format(self, technical_output: Dict[str, Any]) -> Dict[str, Any]:
@@ -1112,9 +1242,46 @@ class SimpleStringingOptimizer:
             "summary": technical_output.get("summary", {})
         }
         
+        # Calculate and add system-wide DC power and DC/AC ratio to summary
+        total_system_dc_power = 0
+        total_system_ac_power = 0
+        inverter_dc_ac_ratios = {}
+        
+        for inv_id, inv_specs in inverter_specs.items():
+            power_info = inv_specs.get("power", {})
+            dc_power = power_info.get("total_dc_power_W", 0)
+            ac_power = power_info.get("rated_ac_power_W", 0)
+            dc_ac = power_info.get("dc_ac_ratio", 0)
+            
+            total_system_dc_power += dc_power
+            total_system_ac_power += ac_power
+            
+            if dc_ac > 0:
+                inverter_dc_ac_ratios[inv_id] = dc_ac
+        
+        # Calculate system-wide DC/AC ratio
+        system_dc_ac_ratio = (total_system_dc_power / total_system_ac_power) if total_system_ac_power > 0 else 0
+        
+        # Add to summary
+        if total_system_dc_power > 0:
+            frontend_output["summary"]["system_total_dc_power_W"] = round(total_system_dc_power, 2)
+        
+        if total_system_ac_power > 0:
+            frontend_output["summary"]["system_total_ac_power_W"] = round(total_system_ac_power, 2)
+        
+        if system_dc_ac_ratio > 0:
+            frontend_output["summary"]["system_dc_ac_ratio"] = round(system_dc_ac_ratio, 2)
+        
+        if inverter_dc_ac_ratios:
+            frontend_output["summary"]["inverter_dc_ac_ratios"] = inverter_dc_ac_ratios
+        
         # Add straggler warnings if present
         if "straggler_warnings" in technical_output:
             frontend_output["straggler_warnings"] = technical_output["straggler_warnings"]
+        
+        # Add disconnected panel warnings if present
+        if "disconnected_warnings" in technical_output:
+            frontend_output["disconnected_warnings"] = technical_output["disconnected_warnings"]
         
         # Add preliminary sizing check if present
         if "preliminary_sizing_check" in technical_output:
@@ -1131,7 +1298,6 @@ class SimpleStringingOptimizer:
         num_panels = len(panel_ids)
         
         # Temperature adjustments
-        temp_coeff_voc = 0.00446  # V/°C per panel
         temp_diff_cold = self.temperature_data.min_temp_c - 25.0
         temp_diff_hot = self.temperature_data.max_temp_c - 25.0
         
@@ -1139,8 +1305,8 @@ class SimpleStringingOptimizer:
         panel = self.panel_specs[0]
         
         # Voltage calculations
-        voc_cold = panel.voc_stc * (1 + temp_coeff_voc * temp_diff_cold)
-        vmpp_hot = panel.vmpp_stc * (1 + temp_coeff_voc * temp_diff_hot)
+        voc_cold = panel.voc_stc * (1 + self.temp_coeff_voc * temp_diff_cold)
+        vmpp_hot = panel.vmpp_stc * (1 + self.temp_coeff_vmpp * temp_diff_hot)
         
         # String voltage/current/power
         string_voc_cold = voc_cold * num_panels

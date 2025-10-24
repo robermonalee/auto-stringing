@@ -88,7 +88,8 @@ class SolarStringingVisualizer:
         for panel in self.solar_panels:
             panel_id = panel.get('panel_id', '')
             pix_coords = panel.get('pix_coords', {})
-            c0 = pix_coords.get('c0', [0, 0])
+            # Support both lowercase 'c0' and uppercase 'C0'
+            c0 = pix_coords.get('c0') or pix_coords.get('C0', [0, 0])
             
             # c0 is the center coordinate
             panel_centers[panel_id] = (float(c0[0]), float(c0[1]))
@@ -183,18 +184,19 @@ class SolarStringingVisualizer:
                 roof_panels[roof_id].append(panel_id)
         
         # Draw panels and strings for each roof plane
-        for roof_id, panel_ids in roof_panels.items():
-            roof_color = self.roof_colors[int(roof_id) % len(self.roof_colors)]
+        for i, (roof_id, panel_ids) in enumerate(roof_panels.items()):
+            roof_color = self.roof_colors[i % len(self.roof_colors)]
             
             # Draw individual panels using actual corner coordinates
             for panel_id in panel_ids:
                 panel_data = next((p for p in self.solar_panels if p.get('panel_id') == panel_id), None)
                 if panel_data:
                     pix_coords = panel_data.get('pix_coords', {})
-                    c1 = pix_coords.get('c1', [0, 0])
-                    c2 = pix_coords.get('c2', [0, 0])
-                    c3 = pix_coords.get('c3', [0, 0])
-                    c4 = pix_coords.get('c4', [0, 0])
+                    # Support both lowercase and uppercase coordinate keys
+                    c1 = pix_coords.get('c1') or pix_coords.get('C1', [0, 0])
+                    c2 = pix_coords.get('c2') or pix_coords.get('C2', [0, 0])
+                    c3 = pix_coords.get('c3') or pix_coords.get('C3', [0, 0])
+                    c4 = pix_coords.get('c4') or pix_coords.get('C4', [0, 0])
                     
                     # Create panel polygon from corner coordinates
                     panel_corners = [
@@ -204,10 +206,10 @@ class SolarStringingVisualizer:
                         (float(c4[0]), float(c4[1]))
                     ]
                     
-                    # Use darker blue for panels
-                    panel_color = '#2E86AB'  # Darker blue
+                    # Use roof-specific color for panels
+                    panel_color = roof_color if roof_color else '#2E86AB'  # Use roof color or default blue
                     panel_polygon = Polygon(panel_corners, closed=True,
-                                          facecolor=panel_color, alpha=0.8,
+                                          facecolor=panel_color, alpha=0.6,
                                           edgecolor='black', linewidth=0.5)
                     ax.add_patch(panel_polygon)
                     
@@ -222,45 +224,90 @@ class SolarStringingVisualizer:
     
     def _draw_string_connections(self, ax, panel_centers: Dict[str, Tuple[float, float]]):
         """Draw lines connecting panels in the same string"""
-        string_count = 0
         
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id, mppts in inverters.items():
-                for mppt_id, panel_ids in mppts.items():
-                    if len(panel_ids) > 1:  # Only draw connections for strings with multiple panels
-                        # Get coordinates for panels in this string
-                        string_coords = []
-                        for panel_id in panel_ids:
-                            if panel_id in panel_centers:
-                                string_coords.append(panel_centers[panel_id])
+        # Check if results has 'strings' (new format) or 'connections' (old format)
+        strings_data = self.results.get('strings', {})
+        
+        if strings_data:
+            # New format: flat strings structure
+            string_count = 0
+            for string_id, string_info in sorted(strings_data.items()):
+                panel_ids = string_info.get('panel_ids', [])
+                
+                if len(panel_ids) > 1:  # Only draw connections for strings with multiple panels
+                    # Get coordinates for panels in this string
+                    string_coords = []
+                    for panel_id in panel_ids:
+                        if panel_id in panel_centers:
+                            string_coords.append(panel_centers[panel_id])
+                    
+                    if len(string_coords) > 1:
+                        # Draw connection lines
+                        x_coords = [coord[0] for coord in string_coords]
+                        y_coords = [coord[1] for coord in string_coords]
                         
-                        if len(string_coords) > 1:
-                            # Draw connection lines
-                            x_coords = [coord[0] for coord in string_coords]
-                            y_coords = [coord[1] for coord in string_coords]
+                        # Use different colors for different strings
+                        color = self.mppt_colors[string_count % len(self.mppt_colors)]
+                        
+                        # Draw lines connecting panels in sequence
+                        for i in range(len(string_coords) - 1):
+                            ax.plot([x_coords[i], x_coords[i+1]], 
+                                   [y_coords[i], y_coords[i+1]], 
+                                   color=color, linewidth=3, alpha=0.8)
                             
-                            # Use different colors for different strings
-                            color = self.mppt_colors[string_count % len(self.mppt_colors)]
+                            # Add directional arrow at the start of each string
+                            if i == 0:  # Only for the first connection in each string
+                                self._draw_directional_arrow(ax, string_coords[0], string_coords[1], color)
+                        
+                        # Add string label (use string_id instead of count)
+                        mid_x = sum(x_coords) / len(x_coords)
+                        mid_y = sum(y_coords) / len(y_coords)
+                        ax.text(mid_x, mid_y, string_id.upper(), 
+                               ha='center', va='center', fontsize=8, 
+                               fontweight='bold', color='white',
+                               bbox=dict(boxstyle="round,pad=0.2", facecolor=color, alpha=0.8))
+                        
+                        string_count += 1
+        else:
+            # Old format: nested connections structure
+            string_count = 0
+            for roof_plane, inverters in self.connections.items():
+                for inverter_id, mppts in inverters.items():
+                    for mppt_id, panel_ids in mppts.items():
+                        if len(panel_ids) > 1:  # Only draw connections for strings with multiple panels
+                            # Get coordinates for panels in this string
+                            string_coords = []
+                            for panel_id in panel_ids:
+                                if panel_id in panel_centers:
+                                    string_coords.append(panel_centers[panel_id])
                             
-                            # Draw lines connecting panels in sequence
-                            for i in range(len(string_coords) - 1):
-                                ax.plot([x_coords[i], x_coords[i+1]], 
-                                       [y_coords[i], y_coords[i+1]], 
-                                       color=color, linewidth=3, alpha=0.8)
+                            if len(string_coords) > 1:
+                                # Draw connection lines
+                                x_coords = [coord[0] for coord in string_coords]
+                                y_coords = [coord[1] for coord in string_coords]
                                 
-                                # Add directional arrow at the start of each string
-                                if i == 0:  # Only for the first connection in each string
-                                    self._draw_directional_arrow(ax, string_coords[0], string_coords[1], color)
-                            
-                            # Add string label
-                            mid_x = sum(x_coords) / len(x_coords)
-                            mid_y = sum(y_coords) / len(y_coords)
-                            ax.text(mid_x, mid_y, f'S{string_count+1}', 
-                                   ha='center', va='center', fontsize=8, 
-                                   fontweight='bold', color='white',
-                                   bbox=dict(boxstyle="round,pad=0.2", facecolor=color, alpha=0.8))
-                            
-                            string_count += 1
+                                # Use different colors for different strings
+                                color = self.mppt_colors[string_count % len(self.mppt_colors)]
+                                
+                                # Draw lines connecting panels in sequence
+                                for i in range(len(string_coords) - 1):
+                                    ax.plot([x_coords[i], x_coords[i+1]], 
+                                           [y_coords[i], y_coords[i+1]], 
+                                           color=color, linewidth=3, alpha=0.8)
+                                    
+                                    # Add directional arrow at the start of each string
+                                    if i == 0:  # Only for the first connection in each string
+                                        self._draw_directional_arrow(ax, string_coords[0], string_coords[1], color)
+                                
+                                # Add string label
+                                mid_x = sum(x_coords) / len(x_coords)
+                                mid_y = sum(y_coords) / len(y_coords)
+                                ax.text(mid_x, mid_y, f'S{string_count+1}', 
+                                       ha='center', va='center', fontsize=8, 
+                                       fontweight='bold', color='white',
+                                       bbox=dict(boxstyle="round,pad=0.2", facecolor=color, alpha=0.8))
+                                
+                                string_count += 1
     
     def _draw_directional_arrow(self, ax, start_coord: Tuple[float, float], end_coord: Tuple[float, float], color: str):
         """Draw a small directional arrow at the start of a string"""
@@ -335,12 +382,19 @@ class SolarStringingVisualizer:
         """
         inverter_positions = {}
         
-        # Get all unique inverter IDs
+        # Get all unique inverter IDs - check both new and old format
         all_inverters = []
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id in inverters.keys():
-                if inverter_id not in all_inverters:
-                    all_inverters.append(inverter_id)
+        
+        # Try new format first (inverter_specs)
+        inverter_specs = self.results.get('inverter_specs', {})
+        if inverter_specs:
+            all_inverters = list(inverter_specs.keys())
+        else:
+            # Fall back to old format (connections)
+            for roof_plane, inverters in self.connections.items():
+                for inverter_id in inverters.keys():
+                    if inverter_id not in all_inverters:
+                        all_inverters.append(inverter_id)
         
         # Position inverters side by side to the right of the house
         # Assuming house is roughly in the center-left area (0-800 pixels)
@@ -463,13 +517,17 @@ class SolarStringingVisualizer:
         # Position inverters side by side outside the house (to the right)
         inverter_positions = self._calculate_clean_inverter_positions()
         
-        mppt_count = 0
+        # Check if we have the new format (strings with inverter references)
+        strings_data = self.results.get('strings', {})
+        inverter_specs = self.results.get('inverter_specs', {})
         
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id, mppts in inverters.items():
-                # Get clean inverter position
-                if inverter_id in inverter_positions:
-                    inv_x, inv_y = inverter_positions[inverter_id]
+        if strings_data and inverter_specs:
+            # New format: use strings data
+            drawn_inverters = set()
+            
+            for inv_id in inverter_specs.keys():
+                if inv_id in inverter_positions and inv_id not in drawn_inverters:
+                    inv_x, inv_y = inverter_positions[inv_id]
                     
                     # Draw inverter as a bright blue vertical rectangle
                     inverter_rect = Rectangle((inv_x-15, inv_y-30), 30, 60,
@@ -478,31 +536,53 @@ class SolarStringingVisualizer:
                     ax.add_patch(inverter_rect)
                     
                     # Add inverter label
-                    ax.text(inv_x, inv_y, inverter_id.split('_')[-1], 
+                    ax.text(inv_x, inv_y, inv_id.split('_')[-1], 
                            ha='center', va='center', fontsize=10, 
                            fontweight='bold', color='white')
                     
-                    # Draw MPPTs without connection lines
-                    for mppt_id, panel_ids in mppts.items():
-                        if panel_ids:
-                            # Position MPPT at center of its panels
-                            mppt_coords = [panel_centers[pid] for pid in panel_ids if pid in panel_centers]
-                            if mppt_coords:
-                                mppt_x = sum(coord[0] for coord in mppt_coords) / len(mppt_coords)
-                                mppt_y = sum(coord[1] for coord in mppt_coords) / len(mppt_coords)
-                                
-                                # Hide MPPT blocks for better readability
-                                # mppt_rect = Rectangle((mppt_x-12, mppt_y-12), 24, 24,
-                                #                     facecolor='darkblue', alpha=0.8,
-                                #                     edgecolor='black', linewidth=1)
-                                # ax.add_patch(mppt_rect)
-                                
-                                # Hide MPPT labels for better readability
-                                # ax.text(mppt_x, mppt_y, mppt_id.split('_')[-1], 
-                                #        ha='center', va='center', fontsize=8, 
-                                #        fontweight='bold', color='white')
-                                
-                                mppt_count += 1
+                    drawn_inverters.add(inv_id)
+        else:
+            # Old format: use connections structure
+            mppt_count = 0
+            
+            for roof_plane, inverters in self.connections.items():
+                for inverter_id, mppts in inverters.items():
+                    # Get clean inverter position
+                    if inverter_id in inverter_positions:
+                        inv_x, inv_y = inverter_positions[inverter_id]
+                        
+                        # Draw inverter as a bright blue vertical rectangle
+                        inverter_rect = Rectangle((inv_x-15, inv_y-30), 30, 60,
+                                                facecolor='#00BFFF', alpha=0.9,  # Bright blue
+                                                edgecolor='#0066CC', linewidth=2)
+                        ax.add_patch(inverter_rect)
+                        
+                        # Add inverter label
+                        ax.text(inv_x, inv_y, inverter_id.split('_')[-1], 
+                               ha='center', va='center', fontsize=10, 
+                               fontweight='bold', color='white')
+                        
+                        # Draw MPPTs without connection lines
+                        for mppt_id, panel_ids in mppts.items():
+                            if panel_ids:
+                                # Position MPPT at center of its panels
+                                mppt_coords = [panel_centers[pid] for pid in panel_ids if pid in panel_centers]
+                                if mppt_coords:
+                                    mppt_x = sum(coord[0] for coord in mppt_coords) / len(mppt_coords)
+                                    mppt_y = sum(coord[1] for coord in mppt_coords) / len(mppt_coords)
+                                    
+                                    # Hide MPPT blocks for better readability
+                                    # mppt_rect = Rectangle((mppt_x-12, mppt_y-12), 24, 24,
+                                    #                     facecolor='darkblue', alpha=0.8,
+                                    #                     edgecolor='black', linewidth=1)
+                                    # ax.add_patch(mppt_rect)
+                                    
+                                    # Hide MPPT labels for better readability
+                                    # ax.text(mppt_x, mppt_y, mppt_id.split('_')[-1], 
+                                    #        ha='center', va='center', fontsize=8, 
+                                    #        fontweight='bold', color='white')
+                                    
+                                    mppt_count += 1
     
     def _add_legend(self, ax):
         """Add legend to the visualization"""
@@ -565,8 +645,8 @@ class SolarStringingVisualizer:
             if panel_id in panel_centers:
                 roof_panels[roof_id].append(panel_id)
         
-        for roof_id, panel_ids in roof_panels.items():
-            color = self.roof_colors[int(roof_id) % len(self.roof_colors)]
+        for i, (roof_id, panel_ids) in enumerate(roof_panels.items()):
+            color = self.roof_colors[i % len(self.roof_colors)]
             for panel_id in panel_ids:
                 x, y = panel_centers[panel_id]
                 panel_rect = Rectangle((x-8, y-8), 16, 16, 

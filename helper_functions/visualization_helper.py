@@ -491,16 +491,16 @@ class SolarStringingVisualizer:
                                 mppt_x = sum(coord[0] for coord in mppt_coords) / len(mppt_coords)
                                 mppt_y = sum(coord[1] for coord in mppt_coords) / len(mppt_coords)
                                 
-                                # Draw MPPT as a dark square (no connection line)
-                                mppt_rect = Rectangle((mppt_x-12, mppt_y-12), 24, 24,
-                                                    facecolor='darkblue', alpha=0.8,
-                                                    edgecolor='black', linewidth=1)
-                                ax.add_patch(mppt_rect)
+                                # Hide MPPT blocks for better readability
+                                # mppt_rect = Rectangle((mppt_x-12, mppt_y-12), 24, 24,
+                                #                     facecolor='darkblue', alpha=0.8,
+                                #                     edgecolor='black', linewidth=1)
+                                # ax.add_patch(mppt_rect)
                                 
-                                # Add MPPT label
-                                ax.text(mppt_x, mppt_y, mppt_id.split('_')[-1], 
-                                       ha='center', va='center', fontsize=8, 
-                                       fontweight='bold', color='white')
+                                # Hide MPPT labels for better readability
+                                # ax.text(mppt_x, mppt_y, mppt_id.split('_')[-1], 
+                                #        ha='center', va='center', fontsize=8, 
+                                #        fontweight='bold', color='white')
                                 
                                 mppt_count += 1
     
