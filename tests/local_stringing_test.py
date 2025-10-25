@@ -29,9 +29,20 @@ from stringer.visualization_helper import SolarStringingVisualizer
 # CONFIGURATION
 # ============================================================================
 
-# Location Configuration (coordinates for the site)
-LATITUDE = 28.3599937
-LONGITUDE = -81.3276217
+
+# Example with two large roof sections
+LATITUDE = 33.781667
+LONGITUDE = -118.410278
+
+# Example with several meidum roof sections (oct 9 design)
+#LATITUDE = 33.94393950
+#LONGITUDE = -117.50492295
+
+# Example with several small roof sections and some with similar pitch and azimuth (oct 23 design)
+#LATITUDE =28.3599937
+#LONGITUDE = -81.3276217
+
+
 STATE = "CA"  # State for temperature data
 
 # Number of inverters to use

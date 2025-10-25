@@ -33,8 +33,8 @@ from stringer.visualization_helper import SolarStringingVisualizer
 #LONGITUDE = -118.410278
 
 # Example with several small roof sections (oct 9 design)
-#LATITUDE = 33.94388889
-#LONGITUDE = -117.50472218
+#LATITUDE = 33.9438888
+#LONGITUDE = -117.5047221
 
 # Example with roof sections with similar pitch and azimuth (oct 23 design)
 LATITUDE =28.3599937
@@ -68,9 +68,10 @@ INVERTER_SPECS = {
 # API Configuration
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 ECS_ASD_API_URL = os.getenv("API_KEY_SYSTEM_DESIGNS")
-STRINGING_API_URL = os.getenv("API_BASE_URL")
+STRINGING_API_URL = os.getenv("API_BASE_URL_US_EAST_1")
 VALIDATE_POWER = False
 OUTPUT_FRONTEND = True
+OVERRIDE_INV_QUANTITY = True
 
 # Output files (named based on coordinates)
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'output_examples')
@@ -148,12 +149,13 @@ def send_stringing_request(auto_design, panel_specs, inverter_specs, state_code)
     
     # Build request payload
     payload = {
-        "autoDesign": auto_design,
-        "solarPanelSpecs": panel_specs,
-        "inverterSpecs": inverter_specs,
+        "auto_design": auto_design,
+        "panel_specs": panel_specs,
+        "inverter_specs": inverter_specs,
         "state": state_code,
-        "output_frontend": OUTPUT_FRONTEND,
-        "invertersQuantity": 2
+        "override_inv_quantity": VALIDATE_POWER,
+        "inverters_quantity": 2,
+        "override_inv_quantity": OVERRIDE_INV_QUANTITY
     }
     
     # Send request
@@ -163,18 +165,14 @@ def send_stringing_request(auto_design, panel_specs, inverter_specs, state_code)
         
         result = response.json()
         
-        if result.get('success'):
-            print(f"  ✓ Stringing optimization successful!")
-            
-            # Check if optimization time is in the response
-            metadata = result.get('data', {}).get('metadata', {})
-            if 'optimization_time_seconds' in metadata:
-                print(f"  ⏱️  Time: {metadata['optimization_time_seconds']:.4f}s")
-            
-            return result['data']
-        else:
-            print(f"  ❌ API request failed: {result.get('error', 'Unknown error')}")
-            return None
+        print(f"  ✓ Stringing optimization successful!")
+        
+        # Check if optimization time is in the response
+        metadata = result.get('metadata', {})
+        if 'optimization_time_seconds' in metadata:
+            print(f"  ⏱️  Time: {metadata['optimization_time_seconds']:.4f}s")
+        
+        return result
             
     except requests.exceptions.RequestException as e:
         print(f"  ❌ Request error: {e}")
@@ -197,31 +195,6 @@ def create_visualization(auto_design, stringing_output, output_path):
     print(f"\n🎨 Creating visualization...")
     
     try:
-        # Convert frontend format back to technical format for visualization
-        technical_connections = {}
-        
-        for string_id, string_data in stringing_output.get('strings', {}).items():
-            roof_id = string_data.get('roof_section', 'unknown')
-            inverter_id = string_data.get('inverter', 'unknown')
-            mppt_id = string_data.get('mppt', 'unknown')
-            panel_ids = string_data.get('panel_ids', [])
-            
-            # Build nested structure: roof -> inverter -> mppt -> panels
-            if roof_id not in technical_connections:
-                technical_connections[roof_id] = {}
-            if inverter_id not in technical_connections[roof_id]:
-                technical_connections[roof_id][inverter_id] = {}
-            if mppt_id not in technical_connections[roof_id][inverter_id]:
-                technical_connections[roof_id][inverter_id][mppt_id] = []
-            
-            technical_connections[roof_id][inverter_id][mppt_id] = panel_ids
-        
-        # Create technical results format
-        technical_results = {
-            'connections': technical_connections,
-            'summary': stringing_output.get('summary', {})
-        }
-        
         # Extract auto_system_design if nested
         if 'auto_system_design' in auto_design:
             auto_system = auto_design['auto_system_design']
@@ -229,16 +202,12 @@ def create_visualization(auto_design, stringing_output, output_path):
             auto_system = auto_design
         
         # Create visualizer
-        visualizer = SolarStringingVisualizer(auto_system, technical_results)
+        visualizer = SolarStringingVisualizer(auto_system, stringing_output)
         
         # Create visualization
         fig, ax = visualizer.create_stringing_visualization(output_path, figsize=(16, 12))
         
         print(f"  ✓ Visualization saved to: {output_path}")
-        
-        # Print wiring analysis
-        panel_centers = visualizer.get_panel_center_coordinates()
-        visualizer.print_wiring_analysis(panel_centers)
         
         return True
         
@@ -290,13 +259,6 @@ def print_summary(stringing_output):
             if power.get('dc_ac_ratio', 0) > 0:
                 print(f"    DC/AC Ratio: {power.get('dc_ac_ratio', 0):.2f}")
     
-    # Show suggestions
-    suggestions = stringing_output.get('suggestions', [])
-    if suggestions:
-        print(f"\n💡 Suggestions:")
-        for suggestion in suggestions:
-            print(f"  • {suggestion}")
-    
     print(f"\n{'='*80}")
 
 
@@ -314,6 +276,7 @@ def main():
     print(f"  Inverter Max Voltage: {INVERTER_SPECS['maxDCInputVoltage']}V")
     print(f"  Inverter AC Power: {INVERTER_SPECS['ratedACPowerW']}W")
     print(f"  Validate Power: {VALIDATE_POWER}")
+    print(f"  Override Inverter Quantity: {OVERRIDE_INV_QUANTITY}")
     
     # Step 1: Fetch autoDesign from ECS ASD API
     print(f"\n{'='*80}")
