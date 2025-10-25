@@ -160,7 +160,7 @@ The optimizer generates a JSON output with the following structure:
   "preliminary_sizing_check": {
     "status": "UNDERSIZED",
     "recommendation": "LOW_INV_CAPACITY",
-    "optimal_inv_capacity_kWh": 21.5
+    "optimal_inv_capacity_W": 21500
   },
   "metadata": {
     "optimization_time_seconds": 0.0123,

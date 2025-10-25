@@ -208,19 +208,19 @@ class SimpleStringingOptimizer:
         if preliminary_ratio > 1.3:
             suitability = "UNDERSIZED"
             recommendation = "LOW_INV_CAPACITY"
-            optimal_inv_capacity_kWh = round(total_system_dc_power / 1.2 / 1000, 1)
+            optimal_inv_capacity_W = round(total_system_dc_power / 1.2)
         elif 1.1 < preliminary_ratio <= 1.3:
             suitability = "OPTIMAL"
             recommendation = "OPTIMAL"
-            optimal_inv_capacity_kWh = None
+            optimal_inv_capacity_W = None
         elif 0.9 <= preliminary_ratio <= 1.1:
             suitability = "ACCEPTABLE"
             recommendation = "ACCEPTABLE"
-            optimal_inv_capacity_kWh = None
+            optimal_inv_capacity_W = None
         else: # preliminary_ratio < 0.9
             suitability = "OVERSIZED"
             recommendation = "OVERSIZED"
-            optimal_inv_capacity_kWh = None
+            optimal_inv_capacity_W = None
         
         result = {
             "total_panels": total_panels,
@@ -231,8 +231,8 @@ class SimpleStringingOptimizer:
             "status": suitability,
             "recommendation": recommendation,
         }
-        if optimal_inv_capacity_kWh is not None:
-            result["optimal_inv_capacity_kWh"] = optimal_inv_capacity_kWh
+        if optimal_inv_capacity_W is not None:
+            result["optimal_inv_capacity_W"] = optimal_inv_capacity_W
             
         return result
     
