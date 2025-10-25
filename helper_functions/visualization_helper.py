@@ -43,13 +43,28 @@ class SolarStringingVisualizer:
         self.results = stringing_results
         self.roof_planes = auto_design_data.get('roof_planes', {})
         self.solar_panels = auto_design_data.get('solar_panels', [])
-        self.connections = stringing_results.get('connections', {})
+        self.stringing_results = stringing_results
+        self._parse_stringing_data()
         
         # Color palette for different roof planes and MPPTs
         self.roof_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
                            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9']
         self.mppt_colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', 
                            '#00FFFF', '#FFA500', '#800080', '#008000', '#FFC0CB']
+
+    def _parse_stringing_data(self):
+        """Parse the new stringing output format."""
+        self.strings = self.stringing_results.get('strings', {})
+        self.inverters = self.stringing_results.get('inverter_specs', {})
+        self.mppts = self.stringing_results.get('mppt_specs', {})
+        self.summary = self.stringing_results.get('summary', {})
+
+        # Create a mapping from panel_id to string_id
+        self.panel_to_string_map = {}
+        for string_id, string_data in self.strings.items():
+            for panel_id in string_data.get('panel_ids', []):
+                self.panel_to_string_map[panel_id] = string_id
+
         
     def parse_polygon_coordinates(self, polygon_wkt: str) -> List[Tuple[float, float]]:
         """
@@ -224,43 +239,42 @@ class SolarStringingVisualizer:
         """Draw lines connecting panels in the same string"""
         string_count = 0
         
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id, mppts in inverters.items():
-                for mppt_id, panel_ids in mppts.items():
-                    if len(panel_ids) > 1:  # Only draw connections for strings with multiple panels
-                        # Get coordinates for panels in this string
-                        string_coords = []
-                        for panel_id in panel_ids:
-                            if panel_id in panel_centers:
-                                string_coords.append(panel_centers[panel_id])
+        for string_id, string_data in self.strings.items():
+            panel_ids = string_data.get('panel_ids', [])
+            if len(panel_ids) > 1:  # Only draw connections for strings with multiple panels
+                # Get coordinates for panels in this string
+                string_coords = []
+                for panel_id in panel_ids:
+                    if panel_id in panel_centers:
+                        string_coords.append(panel_centers[panel_id])
+                
+                if len(string_coords) > 1:
+                    # Draw connection lines
+                    x_coords = [coord[0] for coord in string_coords]
+                    y_coords = [coord[1] for coord in string_coords]
+                    
+                    # Use different colors for different strings
+                    color = self.mppt_colors[string_count % len(self.mppt_colors)]
+                    
+                    # Draw lines connecting panels in sequence
+                    for i in range(len(string_coords) - 1):
+                        ax.plot([x_coords[i], x_coords[i+1]], 
+                               [y_coords[i], y_coords[i+1]], 
+                               color=color, linewidth=3, alpha=0.8)
                         
-                        if len(string_coords) > 1:
-                            # Draw connection lines
-                            x_coords = [coord[0] for coord in string_coords]
-                            y_coords = [coord[1] for coord in string_coords]
-                            
-                            # Use different colors for different strings
-                            color = self.mppt_colors[string_count % len(self.mppt_colors)]
-                            
-                            # Draw lines connecting panels in sequence
-                            for i in range(len(string_coords) - 1):
-                                ax.plot([x_coords[i], x_coords[i+1]], 
-                                       [y_coords[i], y_coords[i+1]], 
-                                       color=color, linewidth=3, alpha=0.8)
-                                
-                                # Add directional arrow at the start of each string
-                                if i == 0:  # Only for the first connection in each string
-                                    self._draw_directional_arrow(ax, string_coords[0], string_coords[1], color)
-                            
-                            # Add string label
-                            mid_x = sum(x_coords) / len(x_coords)
-                            mid_y = sum(y_coords) / len(y_coords)
-                            ax.text(mid_x, mid_y, f'S{string_count+1}', 
-                                   ha='center', va='center', fontsize=8, 
-                                   fontweight='bold', color='white',
-                                   bbox=dict(boxstyle="round,pad=0.2", facecolor=color, alpha=0.8))
-                            
-                            string_count += 1
+                        # Add directional arrow at the start of each string
+                        if i == 0:  # Only for the first connection in each string
+                            self._draw_directional_arrow(ax, string_coords[0], string_coords[1], color)
+                    
+                    # Add string label
+                    mid_x = sum(x_coords) / len(x_coords)
+                    mid_y = sum(y_coords) / len(y_coords)
+                    ax.text(mid_x, mid_y, string_id, 
+                           ha='center', va='center', fontsize=8, 
+                           fontweight='bold', color='white',
+                           bbox=dict(boxstyle="round,pad=0.2", facecolor=color, alpha=0.8))
+                    
+                    string_count += 1
     
     def _draw_directional_arrow(self, ax, start_coord: Tuple[float, float], end_coord: Tuple[float, float], color: str):
         """Draw a small directional arrow at the start of a string"""
@@ -294,38 +308,39 @@ class SolarStringingVisualizer:
         """
         inverter_positions = {}
         
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id, mppts in inverters.items():
-                # Collect all panels connected to this inverter
-                all_panel_coords = []
-                for mppt_id, panel_ids in mppts.items():
-                    for panel_id in panel_ids:
-                        if panel_id in panel_centers:
-                            all_panel_coords.append(panel_centers[panel_id])
+        for inverter_id, inverter_data in self.inverters.items():
+            # Collect all panels connected to this inverter
+            all_panel_coords = []
+            for mppt_id in inverter_data.get('mppt_ids', []):
+                for string_id, string_data in self.strings.items():
+                    if string_data.get('mppt') == mppt_id:
+                        for panel_id in string_data.get('panel_ids', []):
+                            if panel_id in panel_centers:
+                                all_panel_coords.append(panel_centers[panel_id])
+            
+            if all_panel_coords:
+                # Calculate centroid of all connected panels
+                inv_x = sum(coord[0] for coord in all_panel_coords) / len(all_panel_coords)
+                inv_y = sum(coord[1] for coord in all_panel_coords) / len(all_panel_coords)
                 
-                if all_panel_coords:
-                    # Calculate centroid of all connected panels
-                    inv_x = sum(coord[0] for coord in all_panel_coords) / len(all_panel_coords)
-                    inv_y = sum(coord[1] for coord in all_panel_coords) / len(all_panel_coords)
-                    
-                    # Find the closest panel to the centroid for more precise placement
-                    min_distance = float('inf')
-                    optimal_pos = (inv_x, inv_y)
-                    
-                    for coord in all_panel_coords:
-                        distance = ((coord[0] - inv_x) ** 2 + (coord[1] - inv_y) ** 2) ** 0.5
-                        if distance < min_distance:
-                            min_distance = distance
-                            optimal_pos = coord
-                    
-                    # Offset inverter position slightly to avoid overlap with panels
-                    offset_x = 40 if inv_x < 512 else -40  # Offset based on which side of image
-                    offset_y = 40 if inv_y < 512 else -40
-                    
-                    inverter_positions[inverter_id] = (
-                        optimal_pos[0] + offset_x,
-                        optimal_pos[1] + offset_y
-                    )
+                # Find the closest panel to the centroid for more precise placement
+                min_distance = float('inf')
+                optimal_pos = (inv_x, inv_y)
+                
+                for coord in all_panel_coords:
+                    distance = ((coord[0] - inv_x) ** 2 + (coord[1] - inv_y) ** 2) ** 0.5
+                    if distance < min_distance:
+                        min_distance = distance
+                        optimal_pos = coord
+                
+                # Offset inverter position slightly to avoid overlap with panels
+                offset_x = 40 if inv_x < 512 else -40  # Offset based on which side of image
+                offset_y = 40 if inv_y < 512 else -40
+                
+                inverter_positions[inverter_id] = (
+                    optimal_pos[0] + offset_x,
+                    optimal_pos[1] + offset_y
+                )
         
         return inverter_positions
     
@@ -336,11 +351,7 @@ class SolarStringingVisualizer:
         inverter_positions = {}
         
         # Get all unique inverter IDs
-        all_inverters = []
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id in inverters.keys():
-                if inverter_id not in all_inverters:
-                    all_inverters.append(inverter_id)
+        all_inverters = list(self.inverters.keys())
         
         # Position inverters side by side to the right of the house
         # Assuming house is roughly in the center-left area (0-800 pixels)
@@ -367,59 +378,57 @@ class SolarStringingVisualizer:
         
         inverter_positions = self._calculate_optimal_inverter_positions(panel_centers)
         
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id, mppts in inverters.items():
-                if inverter_id in inverter_positions:
-                    inv_x, inv_y = inverter_positions[inverter_id]
-                    
-                    # Calculate total distance from inverter to all its panels
-                    total_distance = 0
-                    panel_count = 0
-                    max_distance = 0
-                    min_distance = float('inf')
-                    
-                    for mppt_id, panel_ids in mppts.items():
-                        for panel_id in panel_ids:
-                            if panel_id in panel_centers:
-                                panel_x, panel_y = panel_centers[panel_id]
-                                distance = ((panel_x - inv_x) ** 2 + (panel_y - inv_y) ** 2) ** 0.5
-                                total_distance += distance
-                                panel_count += 1
-                                max_distance = max(max_distance, distance)
-                                min_distance = min(min_distance, distance)
-                    
-                    avg_distance = total_distance / panel_count if panel_count > 0 else 0
-                    
-                    analysis['inverter_efficiency'][inverter_id] = {
-                        'roof_plane': roof_plane,
-                        'panel_count': panel_count,
-                        'total_distance': total_distance,
-                        'avg_distance': avg_distance,
-                        'max_distance': max_distance,
-                        'min_distance': min_distance,
-                        'efficiency_score': 100 - (avg_distance / 100)  # Simple efficiency metric
-                    }
-                    
-                    analysis['total_wiring_distance'] += total_distance
-                    
-                    # Identify inefficient configurations
-                    if avg_distance > 150:  # Threshold for "too far"
-                        analysis['optimization_suggestions'].append({
-                            'type': 'inverter_placement',
-                            'inverter': inverter_id,
-                            'roof_plane': roof_plane,
-                            'issue': f'Average distance {avg_distance:.1f}px is high',
-                            'suggestion': 'Consider relocating inverter closer to panels'
-                        })
-                    
-                    if max_distance > 300:  # Very far panels
-                        analysis['optimization_suggestions'].append({
-                            'type': 'string_reorganization',
-                            'inverter': inverter_id,
-                            'roof_plane': roof_plane,
-                            'issue': f'Some panels are {max_distance:.1f}px away',
-                            'suggestion': 'Consider splitting into multiple inverters or reorganizing strings'
-                        })
+        for inverter_id, inverter_data in self.inverters.items():
+            if inverter_id in inverter_positions:
+                inv_x, inv_y = inverter_positions[inverter_id]
+                
+                # Calculate total distance from inverter to all its panels
+                total_distance = 0
+                panel_count = 0
+                max_distance = 0
+                min_distance = float('inf')
+                
+                for mppt_id in inverter_data.get('mppt_ids', []):
+                    for string_id, string_data in self.strings.items():
+                        if string_data.get('mppt') == mppt_id:
+                            for panel_id in string_data.get('panel_ids', []):
+                                if panel_id in panel_centers:
+                                    panel_x, panel_y = panel_centers[panel_id]
+                                    distance = ((panel_x - inv_x) ** 2 + (panel_y - inv_y) ** 2) ** 0.5
+                                    total_distance += distance
+                                    panel_count += 1
+                                    max_distance = max(max_distance, distance)
+                                    min_distance = min(min_distance, distance)
+                
+                avg_distance = total_distance / panel_count if panel_count > 0 else 0
+                
+                analysis['inverter_efficiency'][inverter_id] = {
+                    'panel_count': panel_count,
+                    'total_distance': total_distance,
+                    'avg_distance': avg_distance,
+                    'max_distance': max_distance,
+                    'min_distance': min_distance,
+                    'efficiency_score': 100 - (avg_distance / 100)  # Simple efficiency metric
+                }
+                
+                analysis['total_wiring_distance'] += total_distance
+                
+                # Identify inefficient configurations
+                if avg_distance > 150:  # Threshold for "too far"
+                    analysis['optimization_suggestions'].append({
+                        'type': 'inverter_placement',
+                        'inverter': inverter_id,
+                        'issue': f'Average distance {avg_distance:.1f}px is high',
+                        'suggestion': 'Consider relocating inverter closer to panels'
+                    })
+                
+                if max_distance > 300:  # Very far panels
+                    analysis['optimization_suggestions'].append({
+                        'type': 'string_reorganization',
+                        'inverter': inverter_id,
+                        'issue': f'Some panels are {max_distance:.1f}px away',
+                        'suggestion': 'Consider splitting into multiple inverters or reorganizing strings'
+                    })
         
         return analysis
     
@@ -465,44 +474,37 @@ class SolarStringingVisualizer:
         
         mppt_count = 0
         
-        for roof_plane, inverters in self.connections.items():
-            for inverter_id, mppts in inverters.items():
-                # Get clean inverter position
-                if inverter_id in inverter_positions:
-                    inv_x, inv_y = inverter_positions[inverter_id]
-                    
-                    # Draw inverter as a bright blue vertical rectangle
-                    inverter_rect = Rectangle((inv_x-15, inv_y-30), 30, 60,
-                                            facecolor='#00BFFF', alpha=0.9,  # Bright blue
-                                            edgecolor='#0066CC', linewidth=2)
-                    ax.add_patch(inverter_rect)
-                    
-                    # Add inverter label
-                    ax.text(inv_x, inv_y, inverter_id.split('_')[-1], 
-                           ha='center', va='center', fontsize=10, 
-                           fontweight='bold', color='white')
-                    
-                    # Draw MPPTs without connection lines
-                    for mppt_id, panel_ids in mppts.items():
-                        if panel_ids:
-                            # Position MPPT at center of its panels
-                            mppt_coords = [panel_centers[pid] for pid in panel_ids if pid in panel_centers]
-                            if mppt_coords:
-                                mppt_x = sum(coord[0] for coord in mppt_coords) / len(mppt_coords)
-                                mppt_y = sum(coord[1] for coord in mppt_coords) / len(mppt_coords)
-                                
-                                # Hide MPPT blocks for better readability
-                                # mppt_rect = Rectangle((mppt_x-12, mppt_y-12), 24, 24,
-                                #                     facecolor='darkblue', alpha=0.8,
-                                #                     edgecolor='black', linewidth=1)
-                                # ax.add_patch(mppt_rect)
-                                
-                                # Hide MPPT labels for better readability
-                                # ax.text(mppt_x, mppt_y, mppt_id.split('_')[-1], 
-                                #        ha='center', va='center', fontsize=8, 
-                                #        fontweight='bold', color='white')
-                                
-                                mppt_count += 1
+        for inverter_id, inverter_data in self.inverters.items():
+            # Get clean inverter position
+            if inverter_id in inverter_positions:
+                inv_x, inv_y = inverter_positions[inverter_id]
+                
+                # Draw inverter as a bright blue vertical rectangle
+                inverter_rect = Rectangle((inv_x-15, inv_y-30), 30, 60,
+                                        facecolor='#00BFFF', alpha=0.9,  # Bright blue
+                                        edgecolor='#0066CC', linewidth=2)
+                ax.add_patch(inverter_rect)
+                
+                # Add inverter label
+                ax.text(inv_x, inv_y, inverter_id, 
+                       ha='center', va='center', fontsize=10, 
+                       fontweight='bold', color='white')
+                
+                # Draw MPPTs without connection lines
+                for mppt_id in inverter_data.get('mppt_ids', []):
+                    panel_ids = []
+                    for string_id, string_data in self.strings.items():
+                        if string_data.get('mppt') == mppt_id:
+                            panel_ids.extend(string_data.get('panel_ids', []))
+
+                    if panel_ids:
+                        # Position MPPT at center of its panels
+                        mppt_coords = [panel_centers[pid] for pid in panel_ids if pid in panel_centers]
+                        if mppt_coords:
+                            mppt_x = sum(coord[0] for coord in mppt_coords) / len(mppt_coords)
+                            mppt_y = sum(coord[1] for coord in mppt_coords) / len(mppt_coords)
+                            
+                            mppt_count += 1
     
     def _add_legend(self, ax):
         """Add legend to the visualization"""

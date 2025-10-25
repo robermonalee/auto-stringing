@@ -1,0 +1,143 @@
+# API Usage Guide
+
+This document provides instructions on how to use the Solar Stringing Optimizer API.
+
+## API Inputs
+
+### Required Inputs
+
+The API expects a JSON object in the request body with the following required fields:
+
+*   **`auto_design`** (JSON object): The solar panel layout, including panel coordinates and roof plane information.
+*   **`panel_specs`** (JSON object): The electrical specifications of the solar panels.
+*   **`inverter_specs`** (JSON object): The electrical specifications of the inverters.
+*   **`state`** (string): The two-letter state code for temperature data (e.g., "CA").
+
+### Optional Inputs
+
+*   **`inverters_quantity`** (integer): The number of inverters to be used in the system.
+*   **`override_inv_quantity`** (boolean): If set to `true`, the optimizer can dynamically add more inverters than specified in `inverters_quantity`.
+
+## Example `curl` Commands
+
+Replace `<YOUR_API_URL>` with the actual URL of your deployed API Gateway endpoint and `<YOUR_API_KEY>` with your API key.
+
+### Health Check (GET)
+
+This command checks if the API is running and healthy.
+
+```bash
+curl -X GET <YOUR_API_URL>
+```
+
+**Expected Response (200 OK):**
+
+```json
+{
+  "status": "ok",
+  "message": "API is healthy."
+}
+```
+
+### Successful Request (POST)
+
+This command sends a valid stringing request to the API.
+
+```bash
+curl -X POST <YOUR_API_URL> \
+-H "Content-Type: application/json" \
+-H "x-api-key: <YOUR_API_KEY>" \
+-d '{
+  "auto_design": {
+    "roof_planes": [
+      {
+        "id": "1",
+        "azimuth": 180,
+        "pitch": 20,
+        "solar_panels": [
+          {
+            "panel_id": "p1",
+            "center_coords": [100, 100]
+          },
+          {
+            "panel_id": "p2",
+            "center_coords": [100, 200]
+          }
+        ]
+      }
+    ]
+  },
+  "panel_specs": {
+    "voc": 34.79,
+    "vmp": 28.8,
+    "isc": 11.18,
+    "imp": 10.52
+  },
+  "inverter_specs": {
+    "maxDCInputVoltage": 600,
+    "numberOfMPPTs": 1,
+    "startUpVoltage": 60,
+    "maxDCInputCurrentPerMPPT": 15,
+    "maxDCInputCurrentPerString": 15,
+    "mpptOperatingVoltageMinRange": 60,
+    "mpptOperatingVoltageMaxRange": 480,
+    "maxShortCircuitCurrentPerMPPT": 19,
+    "ratedACPowerW": 8000
+  },
+  "state": "CA",
+  "inverters_quantity": 1,
+  "override_inv_quantity": true
+}'
+```
+
+### Bad Request (400)
+
+This command sends a request with missing required fields.
+
+```bash
+curl -X POST <YOUR_API_URL> \
+-H "Content-Type: application/json" \
+-H "x-api-key: <YOUR_API_KEY>" \
+-d '{
+  "panel_specs": {
+    "voc": 34.79,
+    "vmp": 28.8,
+    "isc": 11.18,
+    "imp": 10.52
+  },
+  "inverter_specs": {
+    "maxDCInputVoltage": 600,
+    "numberOfMPPTs": 1,
+    "startUpVoltage": 60,
+    "maxDCInputCurrentPerMPPT": 15,
+    "maxDCInputCurrentPerString": 15,
+    "mpptOperatingVoltageMinRange": 60,
+    "mpptOperatingVoltageMaxRange": 480,
+    "maxShortCircuitCurrentPerMPPT": 19,
+    "ratedACPowerW": 8000
+  },
+  "state": "CA"
+}'
+```
+
+**Expected Response (400 Bad Request):**
+
+```json
+{
+  "error": "Missing required input parameters."
+}
+```
+
+### Internal Server Error (500)
+
+This is an example of what you might receive if an unexpected error occurs on the server.
+
+**Expected Response (500 Internal Server Error):**
+
+```json
+{
+  "error": "Internal Server Error",
+  "details": "<error_details>"
+}
+```
+

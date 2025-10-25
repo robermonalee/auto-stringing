@@ -10,8 +10,10 @@ Total: ~200 lines of straightforward code
 """
 
 import math
+import time
 from typing import List, Dict, Tuple, Any
 from dataclasses import dataclass
+from collections import defaultdict
 from .specs import PanelSpecs, InverterSpecs, TemperatureData
 
 
@@ -203,37 +205,43 @@ class SimpleStringingOptimizer:
         preliminary_ratio = (total_system_dc_power / inverter_ac_power) if inverter_ac_power > 0 else 0
         
         # Determine suitability
-        if preliminary_ratio > 1.5:
+        if preliminary_ratio > 1.3:
             suitability = "UNDERSIZED"
-            recommendation = f"Inverter too small. Need ~{int(total_system_dc_power / (inverter_ac_power * 1.3))} of these or a {total_system_dc_power/1000/1.2:.1f}kW inverter"
-        elif preliminary_ratio < 1.1:
-            suitability = "OVERSIZED"
-            recommendation = "Inverter may be too large. Consider smaller model for cost efficiency"
-        elif 1.1 <= preliminary_ratio <= 1.3:
+            recommendation = "LOW_INV_CAPACITY"
+            optimal_inv_capacity_kWh = round(total_system_dc_power / 1.2 / 1000, 1)
+        elif 1.1 < preliminary_ratio <= 1.3:
             suitability = "OPTIMAL"
-            recommendation = "Inverter size is in optimal range"
-        elif 1.3 < preliminary_ratio <= 1.5:
+            recommendation = "OPTIMAL"
+            optimal_inv_capacity_kWh = None
+        elif 0.9 <= preliminary_ratio <= 1.1:
             suitability = "ACCEPTABLE"
-            recommendation = "Inverter size acceptable, some clipping expected"
-        else:
-            suitability = "UNKNOWN"
-            recommendation = "Unable to determine suitability"
+            recommendation = "ACCEPTABLE"
+            optimal_inv_capacity_kWh = None
+        else: # preliminary_ratio < 0.9
+            suitability = "OVERSIZED"
+            recommendation = "OVERSIZED"
+            optimal_inv_capacity_kWh = None
         
-        return {
+        result = {
             "total_panels": total_panels,
             "power_per_panel_W": round(power_per_panel_hot, 2),
             "total_system_dc_power_W": round(total_system_dc_power, 2),
             "inverter_rated_ac_power_W": round(inverter_ac_power, 2),
             "preliminary_dc_ac_ratio": round(preliminary_ratio, 2),
             "status": suitability,
-            "recommendation": recommendation
+            "recommendation": recommendation,
         }
+        if optimal_inv_capacity_kWh is not None:
+            result["optimal_inv_capacity_kWh"] = optimal_inv_capacity_kWh
+            
+        return result
     
     def optimize(self, inverter_csv_path: str = None, override_inv_quantity: bool = False) -> 'OptimizationResult':
         """
         Run the hierarchical stringing optimization.
         """
-        
+        start_time = time.time()
+
         # Initialize power validator if requested
         if override_inv_quantity:
             from .validatePower import PowerValidator
@@ -277,6 +285,18 @@ class SimpleStringingOptimizer:
         all_strings, unstrung_panels = self._absorb_stragglers(all_strings, unstrung_panels)
         all_strings, unstrung_panels = self._absorb_stragglers_across_similar_roofs(all_strings, unstrung_panels)
 
+        # Report final stragglers
+        if unstrung_panels:
+            stragglers_by_roof = defaultdict(list)
+            for panel in unstrung_panels:
+                stragglers_by_roof[panel.roof_plane_id].append(panel)
+
+            for roof_id, panels in stragglers_by_roof.items():
+                all_roof_panels = roof_groups.get(roof_id, [])
+                straggler_ids = {p.panel_id for p in panels}
+                if all_roof_panels:
+                    self._report_stragglers(all_roof_panels, straggler_ids, roof_id)
+
         # Step 4: Rebalance for parallel connections
         all_strings = self._rebalance_strings_for_parallel(all_strings)
 
@@ -289,7 +309,20 @@ class SimpleStringingOptimizer:
         # We need to re-integrate the full output generation now
         mppts = self._assign_strings_to_mppts(all_strings)
         all_connections = self._assign_mppts_to_inverters(mppts)
-        formatted_result = self._build_formatted_output(all_connections, all_strings)
+        
+        # We need to generate preliminary_check before building the final output
+        preliminary_check = self._calculate_preliminary_dc_ac_ratio()
+
+        metadata = {
+            "optimization_time_seconds": round(time.time() - start_time, 4),
+            "timestamp": time.time(),
+            "total_panels": len(self.panel_specs),
+            "validate_power": override_inv_quantity,
+        }
+        if hasattr(self.temperature_data, 'state'):
+             metadata["state"] = self.temperature_data.state
+
+        formatted_result = self._build_final_output(all_connections, all_strings, preliminary_check, metadata)
 
         return OptimizationResult(
             connections=all_connections,
@@ -319,6 +352,9 @@ class SimpleStringingOptimizer:
                 break
         
         leftovers = [p for p in cluster if p.panel_id in unconnected]
+        if leftovers:
+            print(f"  ⚠️  {len(leftovers)} straggler panels detected on roof {roof_id} (cannot form valid strings)")
+
         return strings, leftovers
 
     def _absorb_stragglers(self, strings: List[List[str]], stragglers: List[PanelSpecs]) -> Tuple[List[List[str]], List[PanelSpecs]]:
@@ -819,7 +855,7 @@ class SimpleStringingOptimizer:
                 "estimated_voltage_V": round(group_voltage, 1),
                 "min_required_voltage_V": round(min_required_voltage, 1),
                 "voltage_deficit_V": round(voltage_deficit, 1),
-                "reason": "Insufficient panels to meet minimum inverter startup voltage"
+                "reason": "LOW_VOLTAGE_STARTUP"
             }
             self.straggler_warnings.append(warning)
         
@@ -927,51 +963,34 @@ class SimpleStringingOptimizer:
     
     def _assign_strings_to_mppts(self, strings: List[List[str]]) -> List[List[List[str]]]:
         """
-        Assign strings to MPPTs, allowing parallel connections where appropriate.
-        
-        Logic:
-        1. First string goes to MPPT_1
-        2. For each subsequent string:
-           - Check if it can be added in parallel to an existing MPPT (voltage and current compatible)
-           - If yes: add to that MPPT
-           - If no: create new MPPT
-        
-        Args:
-            strings: List of strings (each string is a list of panel IDs)
-            
-        Returns:
-            List of MPPTs, where each MPPT contains one or more parallel strings
+        Assign strings to MPPTs, creating parallel connections where possible.
         """
         if not strings:
             return []
+
+        # Group strings by length for potential parallel connection
+        strings_by_length = defaultdict(list)
+        for s in strings:
+            strings_by_length[len(s)].append(s)
+
+        mppts = []
         
-        mppts = []  # Each MPPT is a list of strings (parallel connections)
-        
-        for string in strings:
-            # Get string characteristics
-            string_panels = [self.panel_lookup[pid] for pid in string if pid in self.panel_lookup]
-            if not string_panels:
+        for length, string_group in strings_by_length.items():
+            if not string_group:
                 continue
-            
-            # Calculate string voltage (at hot temp for min voltage check)
-            panel = string_panels[0]
-            temp_diff_hot = self.temperature_data.max_temp_c - 25.0
-            vmpp_hot = panel.vmpp_stc * (1 + self.temp_coeff_vmpp * temp_diff_hot)
-            string_voltage = vmpp_hot * len(string_panels)
+
+            panel = self.panel_lookup[string_group[0][0]]
             string_current = panel.impp_stc
             
-            # Try to add to existing MPPT (parallel connection)
-            added_to_existing = False
-            for mppt in mppts:
-                # Check if this string can be added in parallel to this MPPT
-                if self._can_add_string_to_mppt(mppt, string, string_voltage, string_current):
-                    mppt.append(string)
-                    added_to_existing = True
-                    break
-            
-            # If couldn't add to existing MPPT, create new one
-            if not added_to_existing:
-                mppts.append([string])
+            # Determine how many strings can be connected in parallel
+            max_parallel = 1
+            if string_current > 0:
+                max_parallel = int(self.inverter_specs.max_dc_current_per_mppt / string_current)
+
+            # Create MPPTs, grouping strings for parallel connection
+            for i in range(0, len(string_group), max_parallel):
+                mppt = string_group[i:i + max_parallel]
+                mppts.append(mppt)
         
         return mppts
 
@@ -1021,52 +1040,29 @@ class SimpleStringingOptimizer:
     
     def _assign_mppts_to_inverters(self, mppts: List[List[List[str]]]) -> Dict[str, Dict[str, List[List[str]]]]:
         """
-        Assign MPPTs to inverters based on inverter MPPT capacity and available inverter count.
-        
-        Args:
-            mppts: List of MPPTs (each MPPT contains parallel strings)
-            
-        Returns:
-            Dict mapping inverter IDs to their MPPTs
-            
-        Note:
-            If validate_power is False (default), this will respect the number_of_inverters limit.
-            MPPTs that exceed available inverter capacity will not be assigned.
+        Assign MPPTs to inverters with the new naming convention.
         """
         inverters = {}
         mppts_per_inverter = self.inverter_specs.number_of_mppts
         max_inverters = self.inverter_specs.number_of_inverters if not self.power_validator else float('inf')
         
         inverter_counter = 1
-        mppt_global_counter = 1
-        mppts_assigned = 0
+        mppt_local_counter = 1
         
-        # Calculate total MPPT capacity available
-        total_mppt_capacity = max_inverters * mppts_per_inverter if max_inverters != float('inf') else float('inf')
-        
-        for i in range(0, len(mppts), mppts_per_inverter):
-            # Check if we've reached the inverter limit
+        for mppt in mppts:
             if inverter_counter > max_inverters:
-                # Log unassigned MPPTs
-                unassigned_count = len(mppts) - mppts_assigned
-                if unassigned_count > 0:
-                    print(f"\n⚠️  WARNING: {unassigned_count} MPPTs could not be assigned (inverter limit reached)")
-                    print(f"   Available inverters: {max_inverters}")
-                    print(f"   MPPTs per inverter: {mppts_per_inverter}")
-                    print(f"   Total MPPT capacity: {total_mppt_capacity}")
-                    print(f"   MPPTs needed: {len(mppts)}")
                 break
+
+            inverter_id = f"i{inverter_counter}"
+            if inverter_id not in inverters:
+                inverters[inverter_id] = {}
+                mppt_local_counter = 1
+
+            mppt_id = f"i{inverter_counter}_mppt{mppt_local_counter}"
+            inverters[inverter_id][mppt_id] = mppt
             
-            inverter_id = f"Inverter_{inverter_counter}"
-            inverter_mppts = mppts[i:i + mppts_per_inverter]
-            inverters[inverter_id] = {}
-            
-            for mppt in inverter_mppts:
-                mppt_id = f"MPPT_{mppt_global_counter}"
-                inverters[inverter_id][mppt_id] = mppt
-                mppt_global_counter += 1
-            
-            inverter_counter += 1
+            if len(inverters[inverter_id]) >= mppts_per_inverter:
+                inverter_counter += 1
         
         return inverters
     
@@ -1129,243 +1125,70 @@ class SimpleStringingOptimizer:
         
         return inverters
     
-    def _build_formatted_output(self, inverter_structure: Dict[str, Dict[str, List[List[str]]]], 
-                                all_strings: List[List[str]]) -> Dict[str, Any]:
+    def _build_final_output(self, inverter_structure: Dict[str, Dict[str, List[List[str]]]], all_strings: List[List[str]], preliminary_check: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Build the final formatted output with inverter at top of hierarchy.
+        Build the final JSON output in the desired format.
         """
-        # Create string ID mapping and track which roof each string belongs to
-        string_counter = 1
-        string_to_id = {}
-        string_to_roof = {}
-        
-        for panel_ids in all_strings:
-            string_id = f"s{string_counter}"
-            string_to_id[tuple(panel_ids)] = string_id
-            if panel_ids:
-                string_to_roof[string_id] = self.panel_lookup[panel_ids[0]].roof_plane_id
-            string_counter += 1
-        
-        # Build connections organized by: Inverter → Roof → MPPT → Strings
-        connections_by_inverter = {}
-        
-        for inv_id, mppt_data in inverter_structure.items():
-            connections_by_inverter[inv_id] = {}
-            
-            for mppt_id, parallel_strings in mppt_data.items():
-                # Determine which roof this MPPT belongs to (from first string)
-                if not parallel_strings or not parallel_strings[0]:
-                    continue
-                
-                first_string = parallel_strings[0]
-                string_id = string_to_id.get(tuple(first_string))
-                roof_id = string_to_roof.get(string_id, "unknown")
-                
-                # Initialize roof structure under inverter
-                if roof_id not in connections_by_inverter[inv_id]:
-                    connections_by_inverter[inv_id][roof_id] = {}
-                
-                # Initialize MPPT under roof
-                connections_by_inverter[inv_id][roof_id][mppt_id] = {}
-                
-                # Add all strings in this MPPT
-                for panel_ids in parallel_strings:
-                    string_id = string_to_id.get(tuple(panel_ids))
-                    if string_id:
-                        connections_by_inverter[inv_id][roof_id][mppt_id][string_id] = panel_ids
-                
-                # Add MPPT properties
-                connections_by_inverter[inv_id][roof_id][mppt_id]["properties"] = \
-                    self._calculate_mppt_properties_for_strings(parallel_strings)
-        
-        # Build strings dict with basic info
-        strings_dict = {}
-        for panel_ids in all_strings:
-            string_id = string_to_id.get(tuple(panel_ids))
-            if string_id:
-                roof_id = string_to_roof.get(string_id, "unknown")
-                # Calculate string properties
-                string_props = self._calculate_string_properties(panel_ids)
-                strings_dict[string_id] = {
-                    "panel_ids": list(panel_ids),
-                    "panel_count": len(panel_ids),
-                    "properties": string_props
-                }
-        
-        # Calculate summary
-        total_stringed = sum(len(panel_ids) for panel_ids in all_strings)
-        
-        result = {
-            "connections": connections_by_inverter,
-            "strings": strings_dict,
-            "summary": {
-                "total_panels": len(self.panel_specs),
-                "total_panels_stringed": total_stringed,
-                "total_strings": len(all_strings),
-                "total_mppts_used": sum(len(mppt_data) for mppt_data in inverter_structure.values()),
-                "total_inverters_used": len(inverter_structure),
-                "stringing_efficiency": round(100 * total_stringed / len(self.panel_specs), 2)
-            }
-        }
-        
-        # Add straggler warnings if present
-        if self.straggler_warnings:
-            result["straggler_warnings"] = self.straggler_warnings
-            result["summary"]["total_straggler_panels"] = sum(
-                w["panel_count"] for w in self.straggler_warnings
-            )
-        
-        # Add disconnected panel warnings if present
-        if hasattr(self, 'disconnected_warnings') and self.disconnected_warnings:
-            result["disconnected_warnings"] = self.disconnected_warnings
-            result["summary"]["total_disconnected_panels"] = sum(
-                w["panel_count"] for w in self.disconnected_warnings
-            )
-        
-        return result
-    
-    def _transform_to_frontend_format(self, technical_output: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Transform technical format to frontend/presentation format.
-        
-        Technical format: Inverter → Roof → MPPT → Strings
-        Frontend format: Strings (flat) with references + Device specs
-        
-        Frontend structure:
-        {
-          "strings": {
-            "s1": {
-              "panel_ids": [...],
-              "inverter": "Inverter_1",
-              "mppt": "MPPT_1",
-              "roof_section": "3",
-              "properties": {...}
-            }
-          },
-          "inverter_specs": {
-            "Inverter_1": { voltage, current, power properties }
-          },
-          "mppt_specs": {
-            "MPPT_1": { voltage, current, power properties }
-          },
-          "summary": {...}
-        }
-        """
-        # Extract connections from technical format
-        connections = technical_output.get("connections", {})
-        strings_dict = technical_output.get("strings", {})
-        
-        # Build flat strings structure with references
-        frontend_strings = {}
-        mppt_to_inverter = {}
-        string_to_mppt = {}
-        string_to_roof = {}
-        
-        # Extract mapping from technical format
-        for inv_id, roof_data in connections.items():
-            for roof_id, mppt_data in roof_data.items():
-                for mppt_id, string_data in mppt_data.items():
-                    mppt_to_inverter[mppt_id] = inv_id
-                    
-                    for string_id, panel_ids in string_data.items():
-                        if string_id != "properties" and isinstance(panel_ids, list):
-                            string_to_mppt[string_id] = mppt_id
-                            string_to_roof[string_id] = roof_id
-        
-        # Build frontend strings
-        for string_id, string_info in strings_dict.items():
-            mppt_id = string_to_mppt.get(string_id)
-            inv_id = mppt_to_inverter.get(mppt_id)
-            roof_id = string_to_roof.get(string_id)
-            
-            frontend_strings[string_id] = {
-                "panel_ids": string_info.get("panel_ids", []),
-                "inverter": inv_id,
-                "mppt": mppt_id,
-                "roof_section": roof_id,
-                "properties": string_info.get("properties", {})
-            }
-        
-        # Extract inverter specs
-        inverter_specs = {}
-        for inv_id, roof_data in connections.items():
-            # Aggregate properties for this inverter across all its MPPTs
-            all_mppts = []
-            for roof_id, mppt_data in roof_data.items():
-                for mppt_id, string_data in mppt_data.items():
-                    if "properties" in string_data:
-                        all_mppts.append((mppt_id, string_data["properties"]))
-            
-            if all_mppts:
-                # Calculate aggregate inverter properties
-                inverter_specs[inv_id] = self._calculate_inverter_aggregate_specs(all_mppts)
-        
-        # Extract MPPT specs
+        strings_data = {}
         mppt_specs = {}
-        for inv_id, roof_data in connections.items():
-            for roof_id, mppt_data in roof_data.items():
-                for mppt_id, string_data in mppt_data.items():
-                    if "properties" in string_data:
-                        mppt_specs[mppt_id] = string_data["properties"]
+        inverter_specs = {}
+        parallel_strings = []
         
-        # Build frontend output
-        frontend_output = {
-            "strings": frontend_strings,
+        string_counter = 1
+        for inv_id, mppts in inverter_structure.items():
+            inv_mppt_ids = []
+            for mppt_id, strings in mppts.items():
+                inv_mppt_ids.append(mppt_id)
+                mppt_specs[mppt_id] = self._calculate_mppt_properties_for_strings(strings)
+                
+                if len(strings) > 1:
+                    parallel_group = []
+                    for string_panels in strings:
+                        string_id = f"s{string_counter}"
+                        parallel_group.append(string_id)
+                        string_counter += 1
+                    parallel_strings.append(parallel_group)
+                else:
+                    string_counter += len(strings)
+
+            inverter_specs[inv_id] = self._calculate_inverter_aggregate_specs([(mppt_id, mppt_specs[mppt_id]) for mppt_id in inv_mppt_ids])
+
+        # Re-build strings_data with the correct string IDs
+        string_counter = 1
+        for inv_id, mppts in inverter_structure.items():
+            for mppt_id, strings in mppts.items():
+                for string_panels in strings:
+                    string_id = f"s{string_counter}"
+                    strings_data[string_id] = {
+                        "panel_ids": string_panels,
+                        "inverter": inv_id,
+                        "mppt": mppt_id,
+                        "roof_section": self.panel_lookup[string_panels[0]].roof_plane_id,
+                        "properties": self._calculate_string_properties(string_panels)
+                    }
+                    string_counter += 1
+
+        summary = {
+            "total_panels": len(self.panel_specs),
+            "total_panels_stringed": sum(len(s) for s in all_strings),
+            "total_strings": len(all_strings),
+            "total_mppts_used": len(mppt_specs),
+            "total_inverters_used": len(inverter_specs),
+            "stringing_efficiency": round(100 * sum(len(s) for s in all_strings) / len(self.panel_specs), 2) if len(self.panel_specs) > 0 else 0,
+            "total_straggler_panels": len(self.panel_specs) - sum(len(s) for s in all_strings),
+            "parallel_strings": parallel_strings
+        }
+
+        return {
+            "strings": strings_data,
             "inverter_specs": inverter_specs,
             "mppt_specs": mppt_specs,
-            "summary": technical_output.get("summary", {})
+            "summary": summary,
+            "straggler_warnings": self.straggler_warnings,
+            "preliminary_sizing_check": preliminary_check,
+            "metadata": metadata
         }
-        
-        # Calculate and add system-wide DC power and DC/AC ratio to summary
-        total_system_dc_power = 0
-        total_system_ac_power = 0
-        inverter_dc_ac_ratios = {}
-        
-        for inv_id, inv_specs in inverter_specs.items():
-            power_info = inv_specs.get("power", {})
-            dc_power = power_info.get("total_dc_power_W", 0)
-            ac_power = power_info.get("rated_ac_power_W", 0)
-            dc_ac = power_info.get("dc_ac_ratio", 0)
-            
-            total_system_dc_power += dc_power
-            total_system_ac_power += ac_power
-            
-            if dc_ac > 0:
-                inverter_dc_ac_ratios[inv_id] = dc_ac
-        
-        # Calculate system-wide DC/AC ratio
-        system_dc_ac_ratio = (total_system_dc_power / total_system_ac_power) if total_system_ac_power > 0 else 0
-        
-        # Add to summary
-        if total_system_dc_power > 0:
-            frontend_output["summary"]["system_total_dc_power_W"] = round(total_system_dc_power, 2)
-        
-        if total_system_ac_power > 0:
-            frontend_output["summary"]["system_total_ac_power_W"] = round(total_system_ac_power, 2)
-        
-        if system_dc_ac_ratio > 0:
-            frontend_output["summary"]["system_dc_ac_ratio"] = round(system_dc_ac_ratio, 2)
-        
-        if inverter_dc_ac_ratios:
-            frontend_output["summary"]["inverter_dc_ac_ratios"] = inverter_dc_ac_ratios
-        
-        # Add straggler warnings if present
-        if "straggler_warnings" in technical_output:
-            frontend_output["straggler_warnings"] = technical_output["straggler_warnings"]
-        
-        # Add disconnected panel warnings if present
-        if "disconnected_warnings" in technical_output:
-            frontend_output["disconnected_warnings"] = technical_output["disconnected_warnings"]
-        
-        # Add preliminary sizing check if present
-        if "preliminary_sizing_check" in technical_output:
-            frontend_output["preliminary_sizing_check"] = technical_output["preliminary_sizing_check"]
-        
-        # Add suggestions if present
-        if "suggestions" in technical_output:
-            frontend_output["suggestions"] = technical_output["suggestions"]
-        
-        return frontend_output
+
     
     def _calculate_string_properties(self, panel_ids: List[str]) -> Dict[str, Any]:
         """Calculate electrical properties for a single string"""
@@ -1455,8 +1278,7 @@ class SimpleStringingOptimizer:
                     "vmpp_per_panel_V": round(vmpp_hot, 2),
                     "impp_per_panel_A": round(panel.impp_stc, 2),
                     "string_voltage_V": round(string_voltage, 2),
-                    "mppt_current_A": round(total_current, 2),
-                    "formula": "Power = String_Voltage × MPPT_Current = (Vmpp × panels) × (Impp × strings)"
+                    "mppt_current_A": round(total_current, 2)
                 }
             }
         }
@@ -1507,9 +1329,17 @@ class SimpleStringingOptimizer:
         max_dc_power = rated_ac_power * 1.5 if rated_ac_power > 0 else 0
         
         dc_ac_ratio = (total_dc_power / rated_ac_power) if rated_ac_power > 0 else 0
-        will_clip_power = total_dc_power > rated_ac_power
-        within_dc_limit = total_dc_power <= max_dc_power
         
+        # Determine status based on DC/AC ratio
+        if dc_ac_ratio < 0.9:
+            status = "OVERSIZED"
+        elif 0.9 <= dc_ac_ratio <= 1.1:
+            status = "ACCEPTABLE"
+        elif 1.1 < dc_ac_ratio <= 1.3:
+            status = "OPTIMAL"
+        else: # dc_ac_ratio > 1.3
+            status = "UNDERSIZED"
+
         return {
             "num_mppts": len(mppt_list),
             "mppt_ids": [mppt[0] for mppt in mppt_list],
@@ -1528,17 +1358,15 @@ class SimpleStringingOptimizer:
                 "rated_ac_power_W": round(rated_ac_power, 2),
                 "max_dc_power_limit_W": round(max_dc_power, 2),
                 "dc_ac_ratio": round(dc_ac_ratio, 2),
-                "will_clip_power": will_clip_power,
-                "within_dc_power_limit": within_dc_limit,
+                "will_clip_power": total_dc_power > rated_ac_power,
+                "within_dc_power_limit": total_dc_power <= max_dc_power,
                 "average_power_per_mppt_W": round(total_dc_power / len(mppt_list) if mppt_list else 0, 2)
             },
             "validation": {
                 "all_mppts_safe": all_mppts_safe,
-                "within_power_limits": within_dc_limit,
-                "optimal_dc_ac_ratio": 1.1 <= dc_ac_ratio <= 1.3,
-                "status": "OPTIMAL" if (all_mppts_safe and within_dc_limit and 1.1 <= dc_ac_ratio <= 1.3) else 
-                         ("ACCEPTABLE" if (all_mppts_safe and within_dc_limit and 1.3 < dc_ac_ratio <= 1.5) else
-                         ("UNDERSIZED" if dc_ac_ratio > 1.5 else "OVERSIZED"))
+                "within_power_limits": total_dc_power <= max_dc_power,
+                "optimal_dc_ac_ratio": 1.1 < dc_ac_ratio <= 1.3,
+                "status": status
             }
         }
 

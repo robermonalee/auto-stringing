@@ -1,229 +1,191 @@
 # Solar Panel Stringing Optimizer
 
-A comprehensive Python-based system for optimizing solar panel stringing configurations based on temperature-adjusted voltages and inverter constraints. This implementation follows a complete end-to-end process from initial calculations to final output, with clear decision points for parallel connections.
+A comprehensive Python-based system for optimizing solar panel stringing configurations based on temperature-adjusted voltages and inverter constraints.
 
-## 🚀 Features
+## 1. What This Does
 
-- **Temperature-Adjusted Calculations**: Uses linear functions from `solar_cell_temperature_coefficients.py` to calculate panel voltages at extreme temperatures
-- **Multi-Phase Optimization**: Implements the complete 4-phase optimization process
-- **Parallel Connection Logic**: Automatically determines optimal series and parallel connections
-- **Real Data Integration**: Works with actual solar design data from `auto-design.json`
-- **Comprehensive Output**: Generates detailed JSON configuration with system specifications
-- **Heuristic Algorithm**: Fast greedy optimization for large systems (>12 panels)
-- **Visualization Support**: Panel layout and stringing connection visualization
-- **AWS Deployment Ready**: Minimal dependencies for cloud deployment
+This optimizer takes a solar panel layout and equipment specifications as input and generates an optimized stringing configuration. It aims to maximize the system's performance and efficiency by grouping panels into strings that respect the electrical constraints of the inverters and MPPTs, while considering temperature effects on voltage.
 
-## 📁 Project Structure
+## 2. Project Structure
 
 ```
 auto-stringing/
-├── main_optimizer.py                    # Main entry point and orchestrator
-├── solar_stringing_optimizer.py         # Core optimization algorithm
-├── data_parsers.py                      # Data loading and parsing utilities
-├── solar_cell_temperature_coefficients.py # Linear temperature functions
-├── auto_design_reference.txt            # Reference guide for auto-design.json
-├── auto-design.json                     # Solar system design data
-├── panel_specs.csv                      # Panel specifications
-├── inverter_specs.csv                   # Inverter specifications
-├── amb_temperature_data.csv             # Temperature data by state
-└── results.json                         # Output configuration
+├── stringer/
+│   ├── simple_stringing.py         # Core optimization algorithm
+│   ├── data_parsers.py             # Data loading and parsing utilities
+│   ├── specs.py                    # Data classes for panel and inverter specs
+│   └── amb_temperature_data.csv    # Temperature data by state
+├── tests/
+│   └── local_stringing_test.py     # Local test script
+├── output_examples/                # Example output files
+├── helper_functions/
+│   └── visualization_helper.py     # Visualization helper
+├── README.md                       # This file
+└── process_logic.md                # Detailed explanation of the stringing logic
 ```
 
-## 🔧 Installation
+## 3. Process Logic
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/robermonalee/auto-stringing.git
-   cd auto-stringing
-   ```
+The stringing process follows a hierarchical approach to create logical and efficient string paths:
 
-2. **Create and activate virtual environment**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+1.  **Pre-Computation and Constraint Calculation:**
+    *   Calculates the minimum and maximum panel voltages based on historical temperature data for the site's location.
+    *   Determines the valid range of string lengths (minimum, maximum, and ideal) based on the inverter's voltage and current limits.
 
-3. **Install dependencies**:
-   ```bash
-   pip install pandas
-   ```
+2.  **Hierarchical String Generation:**
+    *   **Roof Grouping:** Panels are first grouped by roof plane. Roofs with similar azimuth and pitch angles (within a configurable tolerance) are considered as a single group to allow for more flexible stringing.
+    *   **Proximity Clustering:** Within each roof group, panels are further grouped into localized clusters based on their proximity to each other.
+    *   **String Creation:** The algorithm iterates through each cluster, starting from a corner panel and following a nearest-neighbor approach to create strings of the ideal length.
 
-## 🎯 Usage
+3.  **Straggler Absorption and Rebalancing:**
+    *   **Straggler Absorption:** Any leftover panels (stragglers) that could not form a valid string are then checked to see if they can be absorbed into existing strings without violating any constraints. This is first attempted within the same roof and then across similar roofs.
+    *   **Parallel Rebalancing:** To optimize for parallel connections, the algorithm attempts to rebalance the lengths of strings on similar roofs, aiming to create as many same-length strings as possible.
 
-### Command Line Interface
+4.  **MPPT and Inverter Assignment:**
+    *   **MPPT Assignment:** The generated strings are assigned to the available MPPTs on the inverters. Strings with the same length are prioritized for parallel connection to the same MPPT.
+    *   **Inverter Assignment:** MPPTs are then assigned to inverters. If the `override_inv_quantity` flag is set, the system can dynamically add more inverters if the number of MPPTs exceeds the capacity of the initially specified inverters.
 
-```bash
-python main_optimizer.py <auto_design.json> <panel_specs.csv> <inverter_specs.csv> <temperature_data.csv> <state_name> [output.json]
-```
+## 4. Inputs
 
-### Example
+### Required Inputs
 
-```bash
-python main_optimizer.py auto-design.json panel_specs.csv inverter_specs.csv amb_temperature_data.csv California results.json
-```
+*   **Auto Design Data (JSON):** A JSON file containing the solar panel layout, including panel coordinates and roof plane information. The script can fetch this from an API or load it from a local file.
+    *   `latitude`, `longitude`: The geographical coordinates of the site.
+    *   `state`: The two-letter state code for temperature data.
 
-### Programmatic Usage
+*   **Panel Specifications (Dictionary):** A Python dictionary containing the electrical specifications of the solar panels.
+    *   `voc`: Open-circuit voltage (V)
+    *   `vmp`: Maximum power point voltage (V)
+    *   `isc`: Short-circuit current (A)
+    *   `imp`: Maximum power point current (A)
 
-```python
-from main_optimizer import run_optimization
+*   **Inverter Specifications (Dictionary):** A Python dictionary containing the electrical specifications of the inverters.
+    *   `maxDCInputVoltage`: Maximum DC input voltage (V)
+    *   `numberOfMPPTs`: Number of MPPTs per inverter
+    *   `startUpVoltage`: The minimum voltage required to start the inverter (V)
+    *   `maxDCInputCurrentPerMPPT`: Maximum DC input current per MPPT (A)
+    *   `maxDCInputCurrentPerString`: Maximum DC input current per string (A)
+    *   `mpptOperatingVoltageMinRange`: Minimum MPPT operating voltage (V)
+    *   `mpptOperatingVoltageMaxRange`: Maximum MPPT operating voltage (V)
+    *   `maxShortCircuitCurrentPerMPPT`: Maximum short-circuit current per MPPT (A)
+    *   `ratedACPowerW`: Rated AC power output (W)
 
-# Run optimization
-config = run_optimization(
-    auto_design_path="auto-design.json",
-    panel_specs_path="panel_specs.csv", 
-    inverter_specs_path="inverter_specs.csv",
-    temperature_data_path="amb_temperature_data.csv",
-    state_name="California",
-    output_path="results.json"
-)
+*   **Temperature Data (CSV):** A CSV file (`amb_temperature_data.csv`) containing historical temperature data by state.
 
-# Print summary
-from main_optimizer import print_results_summary
-print_results_summary(config)
-```
+### Optional Inputs
 
-## 🔬 Algorithm Overview
+*   **`INVERTERS_QUANTITY` (integer):** The number of inverters to be used in the system. This is used as a hard limit unless `OVERRIDE_INV_QUANTITY` is true.
+*   **`OVERRIDE_INV_QUANTITY` (boolean):** If set to `true`, the optimizer can dynamically add more inverters than specified in `INVERTERS_QUANTITY` to accommodate all the generated strings.
 
-The optimizer implements a 4-phase process:
+## 5. Output Structure
 
-### Phase 1: Pre-Computation and Temperature Adjustment
-- Calculates maximum panel voltage (coldest day) using linear function: `Voc(T) = -0.286 * T + 107.143`
-- Calculates minimum operating voltage (hottest day) for performance
-- Uses site-specific temperature extremes from state data
+The optimizer generates a JSON output with the following structure:
 
-### Phase 2: String Generation
-- Determines valid string length ranges based on inverter constraints
-- Generates all possible string combinations for each roof plane group
-- Ensures safety limits and operational requirements are met
+*   **`strings`**: Detailed information for each string, including panel IDs, inverter and MPPT assignments, and electrical properties.
+*   **`inverter_specs`**: Aggregated specifications for each inverter, including DC/AC ratio and validation status.
+*   **`mppt_specs`**: Detailed specifications for each MPPT, including voltage, current, and power.
+*   **`summary`**: A high-level summary of the stringing results, including total panels, strings, and efficiency.
+*   **`straggler_warnings`**: A list of warnings for panels that could not be strung.
+*   **`preliminary_sizing_check`**: An initial check of the inverter sizing.
+*   **`metadata`**: Information about the stringing process.
 
-### Phase 3: MPPT Optimization
-- Evaluates all possible stringing plans
-- Assigns strings to MPPTs with parallel connection logic
-- Optimizes for minimum MPPT usage
+### Output Package Codes
 
-### Phase 4: Output Generation
-- Formats optimal configuration into structured JSON
-- Includes system specifications and temperature conditions
-- Provides detailed stringing plan by roof plane
+*   **`straggler_warnings.reason`**:
+    *   `LOW_VOLTAGE_STARTUP`: The panels could not form a string that meets the minimum voltage requirements of the inverter.
+*   **`preliminary_sizing_check.recommendation`**:
+    *   `LOW_INV_CAPACITY`: The inverter is likely undersized for the total DC power of the system.
 
-## 📊 Input Data Requirements
-
-### auto-design.json
-Contains solar system design information:
-- `solar_panels`: Array of panel objects with pixel coordinates and roof plane assignments
-- `roof_planes`: Roof plane definitions with polygon boundaries
-- Panel center coordinates (`c0`) used for stringing analysis
-
-### panel_specs.csv
-Panel specifications including:
-- `voc (V)`: Open-circuit voltage at STC
-- `isc (A)`: Short-circuit current at STC  
-- `vmp (V)`: Maximum power point voltage at STC
-- `imp (A)`: Maximum power point current at STC
-
-### inverter_specs.csv
-Inverter specifications including:
-- `maxDCInputVoltage (V)`: Maximum DC input voltage
-- `numberOfMPPTs`: Number of available MPPTs
-- `mpptOperatingVoltageMinRange (V)`: Minimum MPPT voltage
-- `mpptOperatingVoltageMaxRange (V)`: Maximum MPPT voltage
-- `maxDCInputCurrentPerMPPT (A)`: Maximum current per MPPT
-
-### amb_temperature_data.csv
-Temperature data by state:
-- `Min_Recorded_Temperature_Celsius`: Record low temperature
-- `Max_Recorded_Temperature_Celsius`: Record high temperature
-
-## 📈 Output Format
-
-The optimizer generates a comprehensive JSON output:
+## 6. Example Output
 
 ```json
 {
-  "summary": {
-    "total_inverters": 1,
-    "total_mppts_used": 2,
-    "total_panels": 11
-  },
-  "group_plans": {
-    "1": [3, 8]
-  },
-  "system_details": {
-    "inverter_specifications": {
-      "model": "Huawei SUN2000-2KTL-L1",
-      "max_dc_voltage": 600.0,
-      "mppt_voltage_range": "90.0V - 560.0V",
-      "number_of_mppts": 2
-    },
-    "temperature_conditions": {
-      "min_recorded_temp": "-42.8°C",
-      "max_recorded_temp": "56.7°C",
-      "state": "California"
-    },
-    "panel_specifications": {
-      "total_panels": 11,
-      "voc_stc": "52.79V",
-      "isc_stc": "14.19A",
-      "temperature_functions": "Using linear functions from solar_cell_temperature_coefficients.py"
+  "strings": {
+    "s1": {
+      "panel_ids": ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9"],
+      "inverter": "i1",
+      "mppt": "i1_mppt1",
+      "roof_section": "1",
+      "properties": {
+        "voltage_V": 222.55,
+        "current_A": 10.52,
+        "power_W": 2341.27,
+        "max_voltage_V": 372.34
+      }
     }
+  },
+  "inverter_specs": {
+    "i1": {
+      "num_mppts": 1,
+      "mppt_ids": ["i1_mppt1"],
+      "power": {
+        "total_dc_power_W": 2341.27,
+        "rated_ac_power_W": 8000.0,
+        "dc_ac_ratio": 0.29,
+        "status": "OVERSIZED"
+      }
+    }
+  },
+  "mppt_specs": {
+    "i1_mppt1": {
+      "num_strings": 1,
+      "total_panels": 9,
+      "voltage": {
+        "operating_voltage_V": 222.55,
+        "within_limits": true
+      },
+      "current": {
+        "operating_current_A": 10.52,
+        "within_limits": true
+      },
+      "power": {
+        "total_power_W": 2341.27
+      }
+    }
+  },
+  "summary": {
+    "total_panels": 99,
+    "total_panels_stringed": 98,
+    "total_strings": 13,
+    "stringing_efficiency": 98.99,
+    "parallel_strings": [["s1", "s2"]]
+  },
+  "straggler_warnings": [
+    {
+      "roof_id": "5",
+      "panel_ids": ["p100"],
+      "reason": "LOW_VOLTAGE_STARTUP"
+    }
+  ],
+  "preliminary_sizing_check": {
+    "status": "UNDERSIZED",
+    "recommendation": "LOW_INV_CAPACITY",
+    "optimal_inv_capacity_kWh": 21.5
+  },
+  "metadata": {
+    "optimization_time_seconds": 0.0123,
+    "timestamp": 1761358911.172756,
+    "validate_power": true
   }
 }
 ```
 
-## 🌡️ Temperature Functions
+## 7. Helper Functions
 
-The system uses linear functions from `solar_cell_temperature_coefficients.py`:
+The project includes a `visualization_helper.py` module that can be used to generate visual representations of the stringing configurations on the panel layout. This is useful for debugging and verifying the results of the optimization.
 
-- **Voc**: `Voc(T) = -0.286 * T + 107.143` (coefficient = -0.286%/°C)
-- **Isc**: `Isc(T) = 0.02 * T + 99.5` (coefficient = 0.02%/°C)  
-- **Pmax**: `Pmax(T) = -0.333 * T + 108.333` (coefficient = -0.333%/°C)
+## 8. Temperature Functions
 
-These functions are based on actual solar cell temperature dependence data and provide more accurate modeling than traditional temperature coefficients.
+The system uses temperature coefficients to adjust the panel's voltage based on the ambient temperature. The following coefficients are used:
 
-## 🔍 Key Features
+*   **`temp_coeff_voc`**: -0.00279 V/°C per panel
+*   **`temp_coeff_vmpp`**: -0.00446 V/°C per panel
 
-### Parallel Connection Logic
-The optimizer automatically determines when to use parallel connections:
-- First looks for existing MPPTs with strings of the same length
-- Checks current limits before adding parallel strings
-- Falls back to empty MPPTs or new inverters as needed
+These coefficients are used to calculate the panel's voltage at the record low and high temperatures for the site's location, ensuring that the strings will not exceed the inverter's maximum voltage in the cold or drop below the minimum operating voltage in the heat.
 
-### Safety Calculations
-- Uses record low temperatures for maximum voltage calculations (safety)
-- Uses realistic high operating temperatures for minimum voltage calculations (performance)
-- Ensures all configurations stay within inverter safety limits
+## 9. Recent Changes
 
-### Optimization Strategy
-- Minimizes total MPPT usage for cost efficiency
-- Considers all possible stringing combinations
-- Balances series and parallel connections optimally
-
-## 🧪 Testing
-
-The system has been tested with real data:
-- 11 panels on a single roof plane
-- California temperature extremes (-42.8°C to 56.7°C)
-- Huawei SUN2000-2KTL-L1 inverter with 2 MPPTs
-- Optimal result: 2 strings of 3 and 8 panels using 2 MPPTs
-
-## 📚 References
-
-- `auto_design_reference.txt`: Detailed guide to auto-design.json structure
-- `solar_cell_temperature_coefficients.py`: Temperature function documentation
-- Jinko Solar panel specifications and temperature coefficients
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test with real data
-5. Submit a pull request
-
-## 📄 License
-
-This project is part of the auto-stringing optimization system for solar panel installations.
-
----
-
-**Note**: This implementation follows the complete end-to-end process for backend optimization logic, detailing every step from initial calculations to final output, with clear explanation of when parallel configuration decisions are made.
+*   **Hierarchical Stringing Logic:** The stringing process has been re-architected to follow a hierarchical approach, resulting in more organized and efficient string paths.
+*   **Enforced Parallel Connections:** The algorithm now actively tries to create parallel connections by rebalancing strings on roofs with similar orientations.
+*   **Dynamic Inverter Quantity:** The system can now dynamically add inverters as needed when the `override_inv_quantity` flag is set.
+*   **Streamlined Output Package:** The JSON output has been refined for clarity and programmatic use, with standardized reason codes and more precise metadata.
