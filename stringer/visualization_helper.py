@@ -10,8 +10,12 @@ For AWS deployment, this module should be excluded to avoid heavy dependencies.
 
 import json
 import re
+import logging
 from typing import Dict, List, Tuple, Any, Optional
 from collections import defaultdict
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Optional imports for visualization - only import if available
 try:
@@ -44,6 +48,9 @@ class SolarStringingVisualizer:
         self.roof_planes = auto_design_data.get('roof_planes', {})
         self.solar_panels = auto_design_data.get('solar_panels', [])
         self.connections = stringing_results.get('connections', {})
+        
+        logging.info(f"Visualizer initialized with {len(self.solar_panels)} panels.")
+        logging.info(f"Stringing results received: {json.dumps(stringing_results, indent=2)}")
         
         # Color palette for different roof planes and MPPTs
         self.roof_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
@@ -229,12 +236,14 @@ class SolarStringingVisualizer:
         strings_data = self.results.get('strings', {})
         
         if strings_data:
+            logging.info(f"Found {len(strings_data)} strings in the new format.")
             # New format: flat strings structure
             string_count = 0
             for string_id, string_info in sorted(strings_data.items()):
                 panel_ids = string_info.get('panel_ids', [])
                 
                 if len(panel_ids) > 1:  # Only draw connections for strings with multiple panels
+                    logging.info(f"Drawing string '{string_id}' with {len(panel_ids)} panels.")
                     # Get coordinates for panels in this string
                     string_coords = []
                     for panel_id in panel_ids:
@@ -269,6 +278,7 @@ class SolarStringingVisualizer:
                         
                         string_count += 1
         else:
+            logging.warning("No 'strings' data found. Falling back to old 'connections' format.")
             # Old format: nested connections structure
             string_count = 0
             for roof_plane, inverters in self.connections.items():

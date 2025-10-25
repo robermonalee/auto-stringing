@@ -35,9 +35,9 @@ LONGITUDE = -81.3276217
 STATE = "CA"  # State for temperature data
 
 # Number of inverters to use
-INVERTERS_QUANTITY = 2
+INVERTERS_QUANTITY = 5
 
-OVERRIDE_INV_QUANTITY = False
+OVERRIDE_INV_QUANTITY = True
 
 # Solar Panel Specifications
 SOLAR_PANEL_SPECS = {
@@ -139,48 +139,19 @@ def create_visualization(auto_design, stringing_output, output_path):
     print(f"\n🎨 Creating visualization...")
     
     try:
-        # Convert frontend format back to technical format for visualization
-        technical_connections = {}
-        
-        for string_id, string_data in stringing_output.get('strings', {}).items():
-            roof_id = string_data.get('roof_section', 'unknown')
-            inverter_id = string_data.get('inverter') or 'unassigned' # Handle None inverter_id
-            mppt_id = string_data.get('mppt', 'unknown')
-            panel_ids = string_data.get('panel_ids', [])
-            
-            # Build nested structure: roof -> inverter -> mppt -> panels
-            if roof_id not in technical_connections:
-                technical_connections[roof_id] = {}
-            if inverter_id not in technical_connections[roof_id]:
-                technical_connections[roof_id][inverter_id] = {}
-            if mppt_id not in technical_connections[roof_id][inverter_id]:
-                technical_connections[roof_id][inverter_id][mppt_id] = []
-            
-            technical_connections[roof_id][inverter_id][mppt_id] = panel_ids
-        
-        # Create technical results format
-        technical_results = {
-            'connections': technical_connections,
-            'summary': stringing_output.get('summary', {})
-        }
-        
-        # Extract auto_system_design if nested
+        # Extract the system design part, which is what the visualizer expects
         if 'auto_system_design' in auto_design:
-            auto_system = auto_design['auto_system_design']
+            design_for_viz = auto_design['auto_system_design']
         else:
-            auto_system = auto_design
-        
-        # Create visualizer
-        visualizer = SolarStringingVisualizer(auto_system, technical_results)
+            design_for_viz = auto_design
+
+        # The visualizer now expects the direct output from the optimizer
+        visualizer = SolarStringingVisualizer(design_for_viz, stringing_output)
         
         # Create visualization
         fig, ax = visualizer.create_stringing_visualization(output_path, figsize=(16, 12))
         
         print(f"  ✓ Visualization saved to: {output_path}")
-        
-        # Print wiring analysis
-        panel_centers = visualizer.get_panel_center_coordinates()
-        # visualizer.print_wiring_analysis(panel_centers) # This function is not available in local_stringing_test.py
         
         return True
         
@@ -252,6 +223,7 @@ def main():
         panels,
         inverter,
         temp,
+        auto_design_data=design,
         inverters_quantity=INVERTERS_QUANTITY
     )
     print(f"  ✓ Optimizer initialized with {INVERTERS_QUANTITY} inverters.")
